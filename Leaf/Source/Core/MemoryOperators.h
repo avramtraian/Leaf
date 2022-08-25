@@ -1,0 +1,27 @@
+// Copyright to Avram Traian. 2022 - 2022.
+// File created on August 22 2022.
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////  YOU SHOULD NEVER INCLUDE THIS FILE  //////////////////////////////////////
+////////////////////  ALL MEMORY OPERATORS DECLARATIONS CAN BE ACCESSED FROM 'Core/Memory.h'  ////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void* operator new (size_t size)
+{
+	return Leaf::Memory::Allocate(size);
+}
+
+void* operator new (size_t size, const char* file, const char* function, Leaf::uint32 line)
+{
+	return Leaf::Memory::AllocateTagged(size, file, function, line);
+}
+
+void* operator new (size_t, void* address) noexcept
+{
+	return address;
+}
+
+void operator delete(void* block)
+{
+	return Leaf::Memory::Free(block);
+}
