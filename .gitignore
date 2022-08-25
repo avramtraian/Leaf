@@ -1,0 +1,13 @@
+# Binaries & Intermediates
+Bin/
+Bin-Int/
+
+# Exceptions
+!Leaf/ThirdParty/premake/Bin/
+
+# Visual Studio project files & directories
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
