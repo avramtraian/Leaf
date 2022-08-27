@@ -88,6 +88,21 @@ namespace Leaf {
 	using RemoveConstType = typename RemoveConst<T>::Type;
 
 	template<typename T>
+	struct ArrayToPointerDecay
+	{
+		using Type = T;
+	};
+
+	template<typename T, SizeT N>
+	struct ArrayToPointerDecay<T[N]>
+	{
+		using Type = T*;
+	};
+
+	template<typename T>
+	using ArrayToPointerDecayType = ArrayToPointerDecay<T>::Type;
+
+	template<typename T>
 	constexpr RemoveReferenceType<T>&& Move(T&& object) noexcept
 	{
 		return static_cast<RemoveReferenceType<T>&&>(object);

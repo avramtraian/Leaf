@@ -5,15 +5,18 @@
 
 namespace Leaf {
 
-	namespace StringCalls {
+	uint64 StringCalls::Length(const char* string)
+	{
+		const char* new_string = string;
+		while (*(new_string++));
+		return new_string - string - 1;
+	}
 
-		uint64 Length(const char* string)
-		{
-			const char* new_string = string;
-			while (*(new_string++));
-			return new_string - string - 1;
-		}
-
+	SizeT StringCalls_Wide::Length(const wchar_t* string)
+	{
+		const wchar_t* new_string = string;
+		while (*(new_string++));
+		return new_string - string - 1;
 	}
 
 }

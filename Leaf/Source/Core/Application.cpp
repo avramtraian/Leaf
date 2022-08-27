@@ -7,9 +7,6 @@
 #include "Memory.h"
 #include "Logger.h"
 
-#include <string>
-#include <string_view>
-
 namespace Leaf {
 
 	static bool s_RestartApplication = false;
@@ -62,9 +59,6 @@ namespace Leaf {
 			return;
 
 		s_Instance = this;
-
-		String s = "hello world";
-		String s2 = s.Insert(", by avr", 5);
 	}
 
 	Application::~Application()

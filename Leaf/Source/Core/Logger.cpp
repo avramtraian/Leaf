@@ -6,19 +6,32 @@
 #include "Memory.h"
 #include "Platform/Platform.h"
 
+#include <iostream>
+
 namespace Leaf {
 
 	struct LoggerData
 	{
-		static constexpr const char* LogTypeToString_ANSI[(uint8)Logger::LogType::MaxEnumValue] =
+		static inline const char* LogTypeToString_ANSI[(uint8)Logger::LogType::MaxEnumValue] =
 		{
-			"[?????]",
-			"[DEBUG]",
-			"[TRACE]",
-			"[INFO]",
-			"[WARN]",
-			"[ERROR]",
-			"[FATAL]"
+			"?????",
+			"DEBUG",
+			"TRACE",
+			"INFO",
+			"WARN",
+			"ERROR",
+			"FATAL" 
+		};
+
+		static inline const char* LogTypeWhitespace_ANSI[(uint8)Logger::LogType::MaxEnumValue] =
+		{
+			"" , // Unknown
+			"" , // Debug
+			"" , // Trace
+			" ", // Info
+			" ", // Warn
+			"" , // Error
+			""	 // Fatal
 		};
 	};
 	static LoggerData* s_LoggerData = nullptr;
@@ -42,9 +55,19 @@ namespace Leaf {
 		s_LoggerData = nullptr;
 	}
 
-	void Logger::Submit(LogType type, const char* message, const char* tag)
+	void Logger::Submit(LogType type, StringView tag, StringView message)
 	{
+		uint8 hour = 17;
+		uint8 minute = 3;
+		uint8 second = 48;
 
+		String result = String::Format(
+			"[%{,2}:%{,2}:%{,2}][%{}][%{}]:%{} %{}\n",
+			hour, minute, second,
+			LoggerData::LogTypeToString_ANSI[(uint8)type], tag, LoggerData::LogTypeWhitespace_ANSI[(uint8)type], message
+		);
+
+		std::cout << result.CStr();
 	}
 
 }

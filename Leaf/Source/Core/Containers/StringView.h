@@ -27,6 +27,11 @@ namespace Leaf {
 		static constexpr uint64 InvalidPos = static_cast<uint64>(-1);
 
 	public:
+		BasicStringView()
+			: m_String(nullptr)
+			, m_Length(0)
+		{}
+
 		BasicStringView(const BasicStringView& other)
 			: m_String(other.m_String)
 			, m_Length(other.m_Length)
@@ -34,7 +39,7 @@ namespace Leaf {
 
 		BasicStringView(const CharType* string)
 			: m_String(string)
-			, m_Length(StringCallsTemplated::Length<CharType>(string))
+			, m_Length(StringCalls_Templated::Length<CharType>(string))
 		{}
 
 		BasicStringView(const CharType* string, uint64 length)
@@ -51,6 +56,8 @@ namespace Leaf {
 		const CharType* CStr() const { return m_String; }
 
 		uint64 Length() const { return m_Length; }
+
+		bool IsEmpty() const { return m_Length == 0; }
 
 	public:
 		uint64 Find(const BasicStringView& substring, uint64 start = 0, uint64 end = 0, SearchDirection direction = SearchDirection::FromStart, SearchCase scase = SearchCase::CaseSensitive) const
@@ -202,7 +209,7 @@ namespace Leaf {
 
 	private:
 		const CharType* m_String;
-		const uint64 m_Length;
+		uint64 m_Length;
 
 	private:
 		template<typename FriendCharType, typename FriendAllocatorType>

@@ -13,7 +13,13 @@ namespace Leaf {
 
 	}
 
-	namespace StringCallsTemplated {
+	namespace StringCalls_Wide {
+
+		LEAF_API SizeT Length(const wchar_t* string);
+
+	}
+
+	namespace StringCalls_Templated {
 
 		template<typename CharType>
 		inline uint64 Length(const CharType* string);
@@ -22,6 +28,12 @@ namespace Leaf {
 		inline uint64 Length(const char* string)
 		{
 			return StringCalls::Length(string);
+		}
+
+		template<>
+		inline uint64 Length(const wchar_t* string)
+		{
+			return StringCalls_Wide::Length(string);
 		}
 
 	}

@@ -5,6 +5,7 @@
 
 #include "Allocator.h"
 #include "StringView.h"
+#include "ToString.h"
 
 namespace Leaf {
 
@@ -200,7 +201,104 @@ namespace Leaf {
 			m_Size += substring.m_Length;
 		}
 
+		BasicString& Append(BasicStringView<CharType> substring)
+		{
+			CharType* this_data = nullptr;
+
+			if (m_UsesSSO)
+			{
+				if (FitsOnSSO(m_Size + substring.m_Length))
+				{
+					this_data = m_SSOData;
+				}
+				else
+				{
+					ReAllocate(m_Size + substring.m_Length);
+					this_data = m_Data;
+				}
+			}
+			else
+			{
+				if (m_Size + substring.m_Length > m_Capacity)
+					ReAllocate(m_Size + substring.m_Length);
+
+				this_data = m_Data;
+			}
+
+			Memory::Copy(this_data + m_Size - 1, substring.m_String, substring.m_Length * sizeof(CharType));
+			this_data[m_Size + substring.m_Length - 1] = 0;
+			m_Size += substring.m_Length;
+
+			return *this;
+		}
+
+		BasicString& AppendChar(CharType c)
+		{
+			CharType* this_data = nullptr;
+
+			if (m_UsesSSO)
+			{
+				if (FitsOnSSO(m_Size + 1))
+				{
+					this_data = m_SSOData;
+				}
+				else
+				{
+					ReAllocate(m_Size + 1);
+					this_data = m_Data;
+				}
+			}
+			else
+			{
+				if (m_Size + 1 > m_Capacity)
+					ReAllocate(m_Size + 1);
+
+				this_data = m_Data;
+			}
+
+			this_data[m_Size - 1] = c;
+			this_data[m_Size] = 0;
+			m_Size++;
+
+			return *this;
+		}
+
 	public:
+		template<typename... Args>
+		static BasicString Format(BasicStringView<CharType> format, Args&&... args)
+		{
+			BasicString result;
+			FormatI(format, result, Leaf::Forward<Args>(args)...);
+			if (format.m_Length > 0)
+				result.Append(format);
+
+			return result;
+		}
+
+	public:
+		void SetMaxSize(SizeT new_max_size)
+		{
+			if (m_UsesSSO)
+			{
+				if (FitsOnSSO(new_max_size))
+					return;
+
+				ReAllocate(new_max_size);
+			}
+			else
+			{
+				if (m_Capacity >= new_max_size)
+					return;
+
+				ReAllocate(new_max_size);
+			}
+		}
+
+		void SetSizeInternal(SizeT new_size)
+		{
+			m_Size = new_size;
+		}
+
 		void Clear()
 		{
 			m_Size = 1;
@@ -418,7 +516,65 @@ namespace Leaf {
 			}
 		}
 
-	public:
+	private:
+		static void FormatI(BasicStringView<CharType>& format, BasicString& out_result)
+		{
+			out_result.Append(format);
+			format.m_String += format.m_Length;
+			format.m_Length = 0;
+		}
+
+		template<typename T>
+		static void FormatI(BasicStringView<CharType>& format, BasicString& out_result, T&& value)
+		{
+			for (SizeT index = 0; index < format.m_Length; index++)
+			{
+				if (format.m_String[index] == '%' && format.m_String[index + 1] == '{')
+				{
+					index += 2;
+					SizeT i = index;
+
+					bool is_valid = false;
+					for (index = index; index < format.m_Length; index++)
+					{
+						if (format.m_String[index] == '}')
+						{
+							is_valid = true;
+							break;
+						}
+					}
+
+					if (!is_valid)
+						// TODO (Avr): Report the error to the user.
+						continue;
+
+					BasicStringView<CharType> flags = BasicStringView<CharType>(format.m_String + i, index - i);
+
+					using ArgumentType = ArrayToPointerDecayType<RemoveReferenceType<T>>;
+					ToString<ArgumentType, CharType, AllocatorType>::Get(out_result, value, flags);
+
+					format.m_String += (index + 1);
+					format.m_Length -= (index + 1);
+					return;
+				}
+				else
+				{
+					out_result.AppendChar(format.m_String[index]);
+				}
+			}
+
+			format.m_String += format.m_Length;
+			format.m_Length = 0;
+		}
+
+		template<typename T, typename... Args>
+		static void FormatI(BasicStringView<CharType>& format, BasicString& out_result, T&& value, Args&&... args)
+		{
+			FormatI(format, out_result, Leaf::Forward<T>(value));
+			FormatI(format, out_result, Leaf::Forward<Args>(args)...);
+		}
+
+	private:
 		void ReAllocate(uint64 new_capacity)
 		{
 			CharType* new_block = (CharType*)m_Allocator.AllocateTaggedI(new_capacity * sizeof(CharType));
