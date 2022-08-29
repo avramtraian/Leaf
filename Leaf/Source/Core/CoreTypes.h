@@ -49,6 +49,9 @@ namespace Leaf {
 	/** An Unsigned Integer representing a size. Usually 64-bit, but never assume. */
 	using SizeT = PlatformTypes::SizeT;
 
+	/** Type of nullptr. */
+	typedef decltype(nullptr) NullptrT;
+
 	constexpr SizeT LF_INVALID_SIZE = static_cast<SizeT>(-1);
 
 	template<typename T>

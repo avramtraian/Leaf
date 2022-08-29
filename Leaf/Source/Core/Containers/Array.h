@@ -37,7 +37,7 @@ namespace Leaf {
 		Array(const Array& other)
 		{
 			for (SizeT index = 0; index < S; index++)
-				m_Data[index] = other.m_Data[index];
+				new (m_Data + index) T(other.m_Data[index]);
 		}
 
 		/**
@@ -48,7 +48,7 @@ namespace Leaf {
 		Array(Array&& other) noexcept
 		{
 			for (SizeT index = 0; index < S; index++)
-				m_Data[index] = Leaf::Move(other.m_Data[index]);
+				new (m_Data + index) T(Leaf::Move(other.m_Data[index]));
 		}
 
 		/**
