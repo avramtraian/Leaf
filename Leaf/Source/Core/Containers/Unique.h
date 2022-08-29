@@ -4,6 +4,7 @@
 #pragma once
 
 #include "Core/CoreTypes.h"
+#include "Core/Assert.h"
 
 namespace Leaf {
 
@@ -81,9 +82,9 @@ namespace Leaf {
 		LF_INLINE const T& operator*() const { return *Get(); }
 
 	public:
-		LF_INLINE T* Get() { return m_Pointer; }
+		LF_INLINE T* Get() { LF_DEBUG_ASSERT(IsValid()); return m_Pointer; }
 
-		LF_INLINE const T* Get() const { return m_Pointer; }
+		LF_INLINE const T* Get() const { LF_DEBUG_ASSERT(IsValid()); return m_Pointer; }
 
 		LF_INLINE bool IsValid() const { return m_Pointer != nullptr; }
 

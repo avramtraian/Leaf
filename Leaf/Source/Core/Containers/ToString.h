@@ -257,6 +257,16 @@ namespace Leaf {
 	};
 
 	template<typename CharType, typename AllocatorType>
+	struct ToString<BasicString<char, AllocatorType>, CharType, AllocatorType>
+	{
+	public:
+		static void Get(BasicString<CharType, AllocatorType>& out_result, const BasicString<char, AllocatorType>& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		{
+			ToString<BasicStringView<char>, CharType, AllocatorType>::Get(out_result, v.ToView(), flags);
+		}
+	};
+
+	template<typename CharType, typename AllocatorType>
 	struct ToString<const char*, CharType, AllocatorType>
 	{
 	public:
@@ -283,6 +293,16 @@ namespace Leaf {
 			result_data[result_length] = 0;
 
 			out_result.SetSizeInternal(result_length + 1);
+		}
+	};
+
+	template<typename CharType, typename AllocatorType>
+	struct ToString<BasicString<wchar_t, AllocatorType>, CharType, AllocatorType>
+	{
+	public:
+		static void Get(BasicString<CharType, AllocatorType>& out_result, const BasicString<wchar_t, AllocatorType>& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		{
+			ToString<BasicStringView<wchar_t>, CharType, AllocatorType>::Get(out_result, v.ToView(), flags);
 		}
 	};
 

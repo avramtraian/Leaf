@@ -6,6 +6,7 @@
 #include "Allocator.h"
 #include "StringView.h"
 #include "ToString.h"
+#include "Core/Assert.h"
 
 namespace Leaf {
 
@@ -544,17 +545,17 @@ namespace Leaf {
 						}
 					}
 
-					if (!is_valid)
-						// TODO (Avr): Report the error to the user.
-						continue;
+					format.m_String += (index + 1);
+					format.m_Length -= (index + 1);
 
-					BasicStringView<CharType> flags = BasicStringView<CharType>(format.m_String + i, index - i);
+					LF_ASSERT_CONTINUE(is_valid == true);
+
+					BasicStringView<CharType> flags = BasicStringView<CharType>(format.m_String - (index + 1) + i, index - i);
 
 					using ArgumentType = ArrayToPointerDecayType<RemoveReferenceType<T>>;
 					ToString<ArgumentType, CharType, AllocatorType>::Get(out_result, value, flags);
 
-					format.m_String += (index + 1);
-					format.m_Length -= (index + 1);
+					
 					return;
 				}
 				else

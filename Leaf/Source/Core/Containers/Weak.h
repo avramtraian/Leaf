@@ -88,9 +88,9 @@ namespace Leaf {
 		LF_INLINE bool operator!=(const Ref<T>& ref) const { return m_Pointer != ref.m_Pointer; }
 
 	public:
-		LF_INLINE T* Get() { return m_Pointer; }
+		LF_INLINE T* Get() { LF_DEBUG_ASSERT(IsValid()); return m_Pointer; }
 
-		LF_INLINE const T* Get() const { return m_Pointer; }
+		LF_INLINE const T* Get() const { LF_DEBUG_ASSERT(IsValid()); return m_Pointer; }
 
 		LF_INLINE bool IsValid() const { return m_Pointer != nullptr; }
 

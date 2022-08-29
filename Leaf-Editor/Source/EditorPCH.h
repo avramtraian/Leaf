@@ -19,3 +19,4 @@
 #include <Core/Containers/Unique.h>
 
 #include <Core/CoreLogs.h>
+#include <Core/Assert.h>

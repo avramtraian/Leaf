@@ -5,6 +5,7 @@
 
 #include "Core/CoreTypes.h"
 #include "Core/Memory.h"
+#include "Core/Assert.h"
 
 #include "Hash.h"
 #include "Comparator.h"
@@ -262,6 +263,9 @@ namespace Leaf {
 				if (m_Flags[index] == ENTRY_FLAG_Occupied && ComparatorType::Compare(m_Entries[index].A, key))
 					return index;
 
+				// The key doesn't exist.
+				LF_ASSERT_RETURN(m_Flags[index] != ENTRY_FLAG_Free, LF_INVALID_SIZE);
+
 				index = (index + 1) % m_Capacity;
 			}
 		}
@@ -283,6 +287,9 @@ namespace Leaf {
 
 		ValueType& Add(const KeyType& key, const ValueType& value)
 		{
+			// The key already exists.
+			LF_ASSERT_RETURN(Contains(key) == false, m_Entries[0].B);
+
 			if (IsOverloaded())
 				ReAllocate(NextCapacity(m_Size + 1));
 
@@ -298,6 +305,9 @@ namespace Leaf {
 
 		ValueType& Add(const KeyType& key, ValueType&& value)
 		{
+			// The key already exists.
+			LF_ASSERT_RETURN(Contains(key) == false, m_Entries[0].B);
+
 			if (IsOverloaded())
 				ReAllocate(NextCapacity(m_Size + 1));
 
@@ -313,6 +323,9 @@ namespace Leaf {
 
 		ValueType& Add(KeyType&& key, const ValueType& value)
 		{
+			// The key already exists.
+			LF_ASSERT_RETURN(Contains(key) == false, m_Entries[0].B);
+
 			if (IsOverloaded())
 				ReAllocate(NextCapacity(m_Size + 1));
 
@@ -328,6 +341,9 @@ namespace Leaf {
 
 		ValueType& Add(KeyType&& key, ValueType&& value)
 		{
+			// The key already exists.
+			LF_ASSERT_RETURN(Contains(key) == false, m_Entries[0].B);
+
 			if (IsOverloaded())
 				ReAllocate(NextCapacity(m_Size + 1));
 
@@ -352,6 +368,12 @@ namespace Leaf {
 
 		void RemoveIndex(SizeT index)
 		{
+			// The index is out of range.
+			LF_ASSERT_RETURN_VOID(index < m_Capacity);
+
+			// The index isn't a valid entry.
+			LF_ASSERT_RETURN_VOID(m_Flags[index] == ENTRY_FLAG_Occupied);
+
 			m_Entries[index].~Entry();
 			m_Flags[index] = ENTRY_FLAG_Deleted;
 			m_Size--;
@@ -361,6 +383,16 @@ namespace Leaf {
 		{
 			SizeT index = Find(key);
 			if (index == LF_INVALID_SIZE)
+				return;
+
+			m_Entries[index].~Entry();
+			m_Flags[index] = ENTRY_FLAG_Deleted;
+			m_Size--;
+		}
+
+		void RemoveIndexIfExists(SizeT index)
+		{
+			if (m_Flags[index] != ENTRY_FLAG_Occupied)
 				return;
 
 			m_Entries[index].~Entry();

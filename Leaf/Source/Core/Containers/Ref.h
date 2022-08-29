@@ -4,6 +4,7 @@
 #pragma once
 
 #include "Core/CoreTypes.h"
+#include "Core/Assert.h"
 
 #include <type_traits>
 
@@ -120,9 +121,9 @@ namespace Leaf {
 		LF_INLINE bool operator!=(NullptrT) const { return m_Pointer != nullptr; }
 
 	public:
-		LF_INLINE T* Get() { return m_Pointer; }
+		LF_INLINE T* Get() { LF_DEBUG_ASSERT(IsValid()); return m_Pointer; }
 
-		LF_INLINE const T* Get() const { return m_Pointer; }
+		LF_INLINE const T* Get() const { LF_DEBUG_ASSERT(IsValid()); return m_Pointer; }
 
 		LF_INLINE bool IsValid() const { return m_Pointer != nullptr; }
 
