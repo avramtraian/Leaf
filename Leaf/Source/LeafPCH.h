@@ -13,3 +13,5 @@
 #include "Core/Containers/Hash.h"
 #include "Core/Containers/Comparator.h"
 #include "Core/Containers/HashTable.h"
+
+#include "Core/CoreLogs.h"

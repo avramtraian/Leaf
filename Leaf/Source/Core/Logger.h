@@ -33,3 +33,27 @@ namespace Leaf {
 	};
 
 }
+
+/** Build Configuration Switch. */
+#if LF_CONFIGURATION_DEBUG
+#	define LF_ENABLE_LOG_DEBUG (1)
+#	define LF_ENABLE_LOG_TRACE (1)
+#	define LF_ENABLE_LOG_INFO  (1)
+#	define LF_ENABLE_LOG_WARN  (1)
+#	define LF_ENABLE_LOG_ERROR (1)
+#	define LF_ENABLE_LOG_FATAL (1)
+#elif LF_CONFIGURATION_RELEASE
+#	define LF_ENABLE_LOG_DEBUG (0)
+#	define LF_ENABLE_LOG_TRACE (0)
+#	define LF_ENABLE_LOG_INFO  (1)
+#	define LF_ENABLE_LOG_WARN  (1)
+#	define LF_ENABLE_LOG_ERROR (1)
+#	define LF_ENABLE_LOG_FATAL (1)
+#elif LF_CONFIGURATION_SHIPPING
+#	define LF_ENABLE_LOG_DEBUG (0)
+#	define LF_ENABLE_LOG_TRACE (0)
+#	define LF_ENABLE_LOG_INFO  (0)
+#	define LF_ENABLE_LOG_WARN  (0)
+#	define LF_ENABLE_LOG_ERROR (1)
+#	define LF_ENABLE_LOG_FATAL (1)
+#endif
