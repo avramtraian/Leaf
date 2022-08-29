@@ -14,4 +14,8 @@
 #include "Core/Containers/Comparator.h"
 #include "Core/Containers/HashTable.h"
 
+#include "Core/Containers/Ref.h"
+#include "Core/Containers/Weak.h"
+#include "Core/Containers/Unique.h"
+
 #include "Core/CoreLogs.h"
