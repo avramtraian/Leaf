@@ -63,6 +63,9 @@
 #	define LF_INLINE  __forceinline
 
 #	define LF_FUNCTION     __FUNCSIG__
+
+	// class 'A' needs to have dll-interface to be used by clients of class 'B'
+#	pragma warning (disable : 4251)
 #endif
 
 /** Available on all compilers. */
@@ -88,4 +91,26 @@
 
 #ifndef LF_CONFIGURATION_SHIPPING
 #	define LF_CONFIGURATION_SHIPPING (0)
+#endif
+
+//////// Utilities ////////
+
+#define BIT(BIT_NO) (1 << (BIT_NO)) 
+
+/** Platform switch. */
+#if LF_PLATFORM_WINDOWS
+#	define LF_PLATFORM_NAME "Windows"
+#elif LF_PLATFORM_MACOS
+#	define LF_PLATFORM_NAME "MacOS"
+#elif LF_PLATFORM_LINUX
+#	define LF_PLATFORM_NAME "Linux"
+#endif
+
+/** Build Configuration switch. */
+#if LF_CONFIGURATION_DEBUG
+#	define LF_CONFIGURATION_NAME "Debug"
+#elif LF_CONFIGURATION_RELEASE
+#	define LF_CONFIGURATION_NAME "Release"
+#elif LF_CONFIGURATION_SHIPPING
+#	define LF_CONFIGURATION_NAME "Shipping"
 #endif

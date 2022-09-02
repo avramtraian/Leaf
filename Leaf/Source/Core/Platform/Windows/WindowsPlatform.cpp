@@ -11,8 +11,12 @@ namespace Leaf {
 
 	struct WindowsPlatformData
 	{
+		HANDLE ProcessHandle;
+
 		HANDLE ConsoleHandle;
 		ConsoleColor CurrentConsoleColors[2];
+
+		bool IsCursorVisible = true;
 	};
 	static WindowsPlatformData* s_PlatformData = nullptr;
 
@@ -35,12 +39,17 @@ namespace Leaf {
 			return false;
 		new (s_PlatformData) WindowsPlatformData();
 
+		s_PlatformData->ProcessHandle = GetModuleHandle(NULL);
+
 		s_PlatformData->ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 		s_PlatformData->CurrentConsoleColors[0] = ConsoleColor::White;
 		s_PlatformData->CurrentConsoleColors[1] = ConsoleColor::Black;
 
 		if (s_PlatformData->ConsoleHandle != INVALID_HANDLE_VALUE)
 			SetConsoleTextAttribute(s_PlatformData->ConsoleHandle, Utils::ConsoleFlags(s_PlatformData->CurrentConsoleColors[0], s_PlatformData->CurrentConsoleColors[1]));
+
+		ShowCursor(TRUE);
+		s_PlatformData->IsCursorVisible = true;
 
 		return true;
 	}
@@ -50,12 +59,20 @@ namespace Leaf {
 		if (!s_PlatformData)
 			return;
 
+		ShowCursor(TRUE);
+		s_PlatformData->IsCursorVisible = true;
+
 		if (s_PlatformData->ConsoleHandle != INVALID_HANDLE_VALUE)
 			Platform::SetConsoleColor(ConsoleColor::White, ConsoleColor::Black);
 
 		(*s_PlatformData).~WindowsPlatformData();
 		free(s_PlatformData);
 		s_PlatformData = nullptr;
+	}
+
+	void* Platform::GetProcessHandle()
+	{
+		return s_PlatformData->ProcessHandle;
 	}
 
 	void* Platform::Allocate(uint64 size)
@@ -101,6 +118,33 @@ namespace Leaf {
 			return;
 
 		WriteConsoleA(s_PlatformData->ConsoleHandle, text.CStr(), (DWORD)text.Length(), NULL, NULL);
+	}
+
+	void Platform::SetCursorVisibility(bool visibility)
+	{
+		if (s_PlatformData->IsCursorVisible == visibility)
+			return;
+
+		s_PlatformData->IsCursorVisible = visibility;
+		ShowCursor(s_PlatformData->IsCursorVisible);
+	}
+
+	bool Platform::GetCursorVisibility()
+	{
+		return s_PlatformData->IsCursorVisible;
+	}
+
+	void Platform::GetMousePosition(int32& out_mouse_x, int32& out_mouse_y)
+	{
+		POINT mouse_pos;
+		GetCursorPos(&mouse_pos);
+		out_mouse_x = (int32)mouse_pos.x;
+		out_mouse_y = (int32)mouse_pos.y;
+	}
+
+	void Platform::SetMousePosition(int32 mouse_x, int32 mouse_y)
+	{
+		SetCursorPos((int)mouse_x, (int)mouse_y);
 	}
 
 }

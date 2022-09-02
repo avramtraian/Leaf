@@ -47,6 +47,10 @@ namespace Leaf {
 			{
 				switch (flags.CStr()[0])
 				{
+					case '/':
+					{
+						break;
+					}
 					case ',':
 					{
 						use_default_flags = flags.Length() <= 1;
@@ -174,6 +178,10 @@ namespace Leaf {
 			{
 				switch (flags.CStr()[0])
 				{
+					case '/':
+					{
+						break;
+					}
 					case '.':
 					{
 						use_default_flags = flags.Length() <= 1;

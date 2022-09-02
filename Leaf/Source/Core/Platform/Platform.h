@@ -33,6 +33,9 @@ namespace Leaf {
 		static void Shutdown();
 
 	public:
+		static void* GetProcessHandle();
+
+	public:
 		static void* Allocate(uint64 size);
 
 		static void Free(void* block);
@@ -44,6 +47,15 @@ namespace Leaf {
 		static void SetConsoleColor(ConsoleColor foreground, ConsoleColor background);
 
 		static void SubmitTextToConsole_ANSI(StringView text);
+
+	public:
+		static void SetCursorVisibility(bool visibility);
+
+		static bool GetCursorVisibility();
+
+		static void GetMousePosition(int32& out_mouse_x, int32& out_mouse_y);
+
+		static void SetMousePosition(int32 mouse_x, int32 mouse_y);
 	};
 
 }

@@ -562,7 +562,7 @@ namespace Leaf {
 	private:
 		void ReAllocate(SizeT new_capacity)
 		{
-			ElementType* new_block = (ElementType*)m_AllocatorInstance.AllocateTagged(new_capacity * sizeof(ElementType));
+			ElementType* new_block = (ElementType*)m_AllocatorInstance.AllocateTaggedI(new_capacity * sizeof(ElementType));
 
 			if (m_Size > new_capacity)
 			{

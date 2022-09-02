@@ -13,6 +13,16 @@ namespace Leaf {
 		ApplicationSpecification specification;
 		specification.Name = "Leaf-Editor";
 		specification.CommandArguments = cmd_line_args;
+		specification.PrimaryWindowSpecification.Title = String::Format(
+			"Leaf-Editor -- %{/Platform} -- 64-bit -- %{/Configuration}",
+			              LF_PLATFORM_NAME,          LF_CONFIGURATION_NAME
+		);
+		specification.PrimaryWindowSpecification.Width = 1280;
+		specification.PrimaryWindowSpecification.Height = 720;
+		specification.PrimaryWindowSpecification.PositionX = 300;
+		specification.PrimaryWindowSpecification.PositionY = 300;
+		specification.PrimaryWindowSpecification.Flags = WINDOW_FLAG_Primary | WINDOW_FLAG_StartMaximized;
+		specification.PrimaryWindowSpecification.EventCallback = Application::OnEvent;
 
 		return lnew EditorApplication(specification);
 	}
