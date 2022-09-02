@@ -25,10 +25,10 @@ workspace "Leaf"
 
 	IncludeDirectories["Leaf"] = "%{wks.location}/Leaf/Source"
 
-	Vulkan = os.getenv("VULKAN_SDK")
-	IncludeDirectories["Vulkan"] = Vulkan.."Include"
-	LibraryDirectories["Vulkan"] = Vulkan.."Lib"
-	LibraryNames["Vulkan"] = "vulkan-1"
+	VulkanSDKPath = os.getenv("VULKAN_SDK")
+	IncludeDirectories["VulkanSDK"] = VulkanSDKPath.."/Include"
+	LibraryDirectories["VulkanSDK"] = VulkanSDKPath.."/Lib"
+	LibraryNames["VulkanSDK"] = "vulkan-1"
 
 	group "Core"
 		include "Dev-Core-Leaf.lua"

@@ -25,11 +25,17 @@ project "Leaf"
 		"%{prj.location}/Source/**.h",
 		"%{prj.location}/Source/**.cpp",
 
-		"%{prj.location}/Build/**.lua"
+		"%{prj.location}/Build/**.lua",
+
+		"%{prj.location}/ThirdParty/VMA/**.h"
 	}
 
 	includedirs {
-		(IncludeDirectories["Leaf"])
+		(IncludeDirectories["Leaf"]),
+
+		(IncludeDirectories["VulkanSDK"]),
+
+		"%{prj.location}/ThirdParty/VMA/Include"
 	}
 
 	forceincludes {
@@ -38,6 +44,14 @@ project "Leaf"
 
 	defines {
 		"LF_BUILD_CORE_LIBRARY"
+	}
+
+	libdirs {
+		(LibraryDirectories["VulkanSDK"])
+	}
+
+	links {
+		(LibraryNames["VulkanSDK"])
 	}
 
 	filter "platforms:Win64"

@@ -16,10 +16,10 @@ void* operator new (size_t size, const char* file, const char* function, Leaf::u
 	return Leaf::Memory::AllocateTagged(size, file, function, line);
 }
 
-void* operator new (size_t, void* address) noexcept
-{
-	return address;
-}
+// void* operator new (size_t, void* address) noexcept
+// {
+// 	return address;
+// }
 
 void operator delete(void* block)
 {
