@@ -4,6 +4,9 @@
 #pragma once
 
 #include "ArrayIterator.h"
+#include "Core/Assert.h"
+
+#include <initializer_list>
 
 namespace Leaf {
 
@@ -49,6 +52,14 @@ namespace Leaf {
 		{
 			for (SizeT index = 0; index < S; index++)
 				new (m_Data + index) T(Leaf::Move(other.m_Data[index]));
+		}
+
+		Array(std::initializer_list<T> init_list)
+		{
+			LF_ASSERT_RETURN_VOID(init_list.size() == S);
+
+			for (SizeT index = 0; index < S; index++)
+				new (m_Data + index) T(init_list.begin()[index]);
 		}
 
 		/**

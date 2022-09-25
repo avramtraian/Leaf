@@ -12,6 +12,23 @@ namespace Leaf {
 		return new_string - string - 1;
 	}
 
+	bool StringCalls::Equals(const char* string_a, const char* string_b)
+	{
+		const char* a = string_a;
+		const char* b = string_b;
+
+		while ((*a) && (*b))
+		{
+			if (*a != *b)
+				return false;
+
+			a++;
+			b++;
+		}
+
+		return (*a == *b);
+	}
+
 	SizeT StringCalls_Wide::Length(const wchar_t* string)
 	{
 		const wchar_t* new_string = string;

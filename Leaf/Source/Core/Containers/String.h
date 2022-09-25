@@ -554,7 +554,6 @@ namespace Leaf {
 
 					using ArgumentType = ArrayToPointerDecayType<RemoveReferenceType<T>>;
 					ToString<ArgumentType, CharType, AllocatorType>::Get(out_result, value, flags);
-
 					
 					return;
 				}

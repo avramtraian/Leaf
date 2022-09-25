@@ -146,7 +146,7 @@ namespace Leaf {
 			
 			if (m_Pointer)
 			{
-				casted.m_Pointer = static_cast<Q>(m_Pointer);
+				casted.m_Pointer = static_cast<Q*>(m_Pointer);
 				casted.m_Pointer->__IncrementReferenceCount();
 			}
 
@@ -154,10 +154,11 @@ namespace Leaf {
 		}
 
 	private:
-		static_assert(std::is_base_of_v<RefCounted, T>, "T must be derived from RefCounted!");
 		T* m_Pointer;
 
 	private:
+		friend class Ref;
+
 		template<typename T>
 		friend class Weak;
 	};

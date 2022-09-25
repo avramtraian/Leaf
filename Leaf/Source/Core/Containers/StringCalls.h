@@ -11,6 +11,8 @@ namespace Leaf {
 
 		LEAF_API uint64 Length(const char* string);
 
+		LEAF_API bool Equals(const char* string_a, const char* string_b);
+
 	}
 
 	namespace StringCalls_Wide {

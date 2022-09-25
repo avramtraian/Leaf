@@ -12,6 +12,8 @@
 #include "Engine/Events/MouseEvents.h"
 #include "Engine/Events/WindowEvents.h"
 
+#include "Renderer/Renderer.h"
+
 #include "Core/Platform/Windows/WindowsHeaders.h"
 
 namespace Leaf {
@@ -158,6 +160,11 @@ namespace Leaf {
 		m_NativeHandle = window_hwnd;
 
 		ShowWindow((HWND)m_NativeHandle, show_mode);
+
+		Renderer::RenderingContextSpecification rendering_context_specification;
+		rendering_context_specification.Window = this;
+
+		Renderer::CreateRenderingContext(m_RenderingContext, rendering_context_specification);
 
 		RECT window_rect;
 		GetWindowRect((HWND)m_NativeHandle, &window_rect);

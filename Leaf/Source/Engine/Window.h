@@ -11,22 +11,22 @@ namespace Leaf {
 	enum WindowFlagsEnum : uint32
 	{
 		/** Default. */
-		WINDOW_FLAG_None = BIT(0),
+		WINDOW_FLAG_None = 0,
 
 		/** The application lifetime is the same as the window lifetime. When the window closes, the application will shutdown. */
-		WINDOW_FLAG_Primary = BIT(1),
+		WINDOW_FLAG_Primary = BIT(0),
 
 		/** The window is in fullscreen mode. */
-		WINDOW_FLAG_Fullscreen = BIT(2),
+		WINDOW_FLAG_Fullscreen = BIT(1),
 
 		/** The window will start maximized. After the window creation, this flag does nothing. */
-		WINDOW_FLAG_StartMaximized = BIT(3),
+		WINDOW_FLAG_StartMaximized = BIT(2),
 
 		/** The window will start minimized. After the window creation, this flag does nothing. */
-		WINDOW_FLAG_StartMinimized = BIT(4),
+		WINDOW_FLAG_StartMinimized = BIT(3),
 
 		/** The window is a fixed size. */
-		WINDOW_FLAG_DisableResizing = BIT(5)
+		WINDOW_FLAG_DisableResizing = BIT(4)
 	};
 	using WindowFlags = uint32;
 
@@ -54,6 +54,8 @@ namespace Leaf {
 		/** The window flags. */
 		WindowFlags Flags = WINDOW_FLAG_None;
 	};
+
+	namespace Renderer { class RenderingContext; }
 
 	/** The Leaf Window class. */
 	class LEAF_API Window
@@ -148,6 +150,11 @@ namespace Leaf {
 	public:
 		~Window();
 
+		Window(const Window&) = delete;
+		Window(Window&&) noexcept = delete;
+		Window& operator=(const Window&) = delete;
+		Window& operator=(Window&&) noexcept = delete;
+
 	private:
 		void PumpWindowEvents();
 
@@ -155,10 +162,14 @@ namespace Leaf {
 
 	private:
 		WindowSpecification m_Specification;
+
 		void* m_NativeHandle;
+
 		bool m_ShouldClose;
 
 		void* m_OpaqueData;
+
+		Ref<Renderer::RenderingContext> m_RenderingContext;
 
 	private:
 		friend class Application;

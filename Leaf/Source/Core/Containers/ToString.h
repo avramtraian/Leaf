@@ -245,6 +245,67 @@ namespace Leaf {
 	};
 
 	template<typename CharType, typename AllocatorType>
+	struct ToString<bool, CharType, AllocatorType>
+	{
+	public:
+		static void Get(BasicString<CharType, AllocatorType>& out_result, const bool& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		{
+			if (v)
+			{
+				out_result.SetMaxSize(out_result.MaxSize() + 4);
+				out_result.AppendChar('t');
+				out_result.AppendChar('r');
+				out_result.AppendChar('u');
+				out_result.AppendChar('e');
+			}
+			else
+			{
+				out_result.SetMaxSize(out_result.MaxSize() + 5);
+				out_result.AppendChar('f');
+				out_result.AppendChar('a');
+				out_result.AppendChar('l');
+				out_result.AppendChar('s');
+				out_result.AppendChar('e');
+			}
+		}
+	};
+
+	template<typename CharType, typename AllocatorType>
+	struct ToString<const void*, CharType, AllocatorType>
+	{
+	public:
+		static void Get(BasicString<CharType, AllocatorType>& out_result, const void* const& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		{
+			uint64 ptr_val = (uint64)v;
+			CharType buffer[sizeof(void*) * 2 + 1] = {};
+			buffer[sizeof(void*) * 2] = 0;
+
+			for (SizeT index = 0; index < sizeof(void*) * 2; index++)
+			{
+				uint8 digit = ptr_val % 16;
+				ptr_val /= 16;
+
+				if (digit < 10)
+					buffer[sizeof(void*) * 2 - index - 1] = '0' + digit;
+				else
+					buffer[sizeof(void*) * 2 - index - 1] = 'A' + (digit - 10);
+			}
+
+			out_result.Append(buffer);
+		}
+	};
+
+	template<typename CharType, typename AllocatorType>
+	struct ToString<void*, CharType, AllocatorType>
+	{
+	public:
+		static void Get(BasicString<CharType, AllocatorType>& out_result, void* const& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		{
+			ToString<const void*, CharType, AllocatorType>::Get(out_result, v, flags);
+		}
+	};
+
+	template<typename CharType, typename AllocatorType>
 	struct ToString<BasicStringView<char>, CharType, AllocatorType>
 	{
 	public:

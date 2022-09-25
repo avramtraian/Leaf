@@ -7,6 +7,7 @@
 #include "Memory.h"
 #include "Logger.h"
 #include "Engine/Input.h"
+#include "Renderer/Renderer.h"
 
 #include "Engine/Events/KeyEvents.h"
 #include "Engine/Events/MouseEvents.h"
@@ -73,6 +74,13 @@ namespace Leaf {
 			return;
 		}
 
+		Renderer::Config.RenderingAPI = Renderer::API::Vulkan;
+		if (!Renderer::Initialize())
+		{
+			LF_CORE_FATAL("Renderer couldn't be initialized. Exiting...");
+			return;
+		}
+
 		CreateWindow(m_Specification.PrimaryWindowSpecification);
 	}
 
@@ -80,6 +88,8 @@ namespace Leaf {
 	{
 		if (s_Instance != this)
 			return;
+
+		Renderer::Shutdown();
 
 		Input::Shutdown();
 

@@ -16,10 +16,13 @@ void* operator new (size_t size, const char* file, const char* function, Leaf::u
 	return Leaf::Memory::AllocateTagged(size, file, function, line);
 }
 
-// void* operator new (size_t, void* address) noexcept
-// {
-// 	return address;
-// }
+// NOTE (Avr): In Debug configuration, VMA also defines this operator, causing a linking error.
+#if !LF_CONFIGURATION_DEBUG
+void* operator new (size_t, void* address) noexcept
+{
+	return address;
+}
+#endif
 
 void operator delete(void* block)
 {
