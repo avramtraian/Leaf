@@ -31,8 +31,8 @@
 			return (RETURN_VALUE);                      \
 		}
 #else
-#	define LF_VK_CHECK(EXPRESSION)        EXPRESSION
-#	define LF_VK_CHECK_RETURN(EXPRESSION) EXPRESSION
+#	define LF_VK_CHECK(EXPRESSION)                      EXPRESSION
+#	define LF_VK_CHECK_RETURN(EXPRESSION, RETURN_VALUE) EXPRESSION
 #endif
 
 namespace Leaf { namespace Renderer { namespace VulkanRenderer {
@@ -52,6 +52,11 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 	public:
 		VulkanContext(const RenderingContextSpecification& specification, Result& out_result);
 		virtual ~VulkanContext() override;
+
+	private:
+		VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
+
+		VkQueue m_PresentQueue = VK_NULL_HANDLE;
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,7 +72,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		virtual ~VulkanFramebuffer() override;
 
 	private:
-		VkFramebuffer m_Handle;
+		VkFramebuffer m_Handle = VK_NULL_HANDLE;
 	};
 
 } } }

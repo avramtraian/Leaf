@@ -3,23 +3,33 @@
 
 #include "VulkanRenderer.h"
 
+#include "Core/Platform/Platform.h"
+
+/** Platform switch. */
+#if LF_PLATFORM_WINDOWS
+#	include "Core/Platform/Windows/WindowsHeaders.h"
+#	include <vulkan/vulkan_win32.h>
+#elif LF_PLATFORM_LINUX
+#elif LF_PLATFORM_MACOS
+#endif
+
 namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 
 	struct PhysicalDevice
 	{
-		VkPhysicalDevice PhysicalDeviceHandle = VK_NULL_HANDLE;
+		VkPhysicalDevice Handle = VK_NULL_HANDLE;
 
-		bool HasGraphicsQueue = false;
-		bool IsGraphicsQueueShared = true;
-		uint32 GraphicsQueueIndex = UINT32_MAX;
+		bool HasGraphicsQueueFamily = false;
+		bool IsGraphicsQueueFamilyIndexShared = true;
+		uint32 GraphicsQueueFamilyIndex = UINT32_MAX;
 
-		bool HasTransferQueue = false;
-		bool IsTransferQueueShared = true;
-		uint32 TransferQueueIndex = UINT32_MAX;
+		bool HasTransferQueueFamily = false;
+		bool IsTransferQueueFamilyIndexShared = true;
+		uint32 TransferQueueFamilyIndex = UINT32_MAX;
 
-		bool HasComputeQueue = false;
-		bool IsComputeQueueShared = true;
-		uint32 ComputeQueueIndex = UINT32_MAX;
+		bool HasComputeQueueFamily = false;
+		bool IsComputeQueueFamilyIndexShared = true;
+		uint32 ComputeQueueFamilyIndex = UINT32_MAX;
 	};
 
 	struct VulkanRendererData
@@ -33,6 +43,8 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		VkQueue GraphicsQueue = VK_NULL_HANDLE;
 		VkQueue TransferQueue = VK_NULL_HANDLE;
 		VkQueue ComputeQueue = VK_NULL_HANDLE;
+
+		Vector<uint32> CreatedQueueFamilyIndices;
 
 #if LF_VULKAN_ENABLE_VALIDATION
 		VkDebugUtilsMessengerEXT DebugMessenger = VK_NULL_HANDLE;
@@ -67,7 +79,122 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 			return VK_FALSE;
 		}
 
-		static PhysicalDevice PickBestPhysicalDevice(const Vector<VkPhysicalDevice>& devices)
+		static bool PhysicalDeviceHasAllExtensions(const PhysicalDevice& device, const Vector<const char*>& required_extensions)
+		{
+			uint32 device_extensions_count;
+			vkEnumerateDeviceExtensionProperties(device.Handle, nullptr, &device_extensions_count, nullptr);
+
+			Vector<VkExtensionProperties> device_extensions;
+			device_extensions.SetSizeUninitialized(device_extensions_count);
+			vkEnumerateDeviceExtensionProperties(device.Handle, nullptr, &device_extensions_count, device_extensions.Data());
+
+			bool has_all_extensions = true;
+			for (auto& required_extension : required_extensions)
+			{
+				bool was_found = false;
+
+				for (auto& available_extension : device_extensions)
+				{
+					if (StringCalls::Equals(required_extension, available_extension.extensionName))
+					{
+						was_found = true;
+						break;
+					}
+				}
+
+				if (!was_found)
+					return false;
+			}
+
+			return true;
+		}
+
+		static void PhysicalDeviceFindQueueFamilyIndices(PhysicalDevice& device)
+		{
+			uint32 queue_families_count;
+			vkGetPhysicalDeviceQueueFamilyProperties(device.Handle, &queue_families_count, nullptr);
+
+			Vector<VkQueueFamilyProperties> queue_families;
+			queue_families.SetSizeUninitialized((SizeT)queue_families_count);
+			vkGetPhysicalDeviceQueueFamilyProperties(device.Handle, &queue_families_count, queue_families.Data());
+
+			Vector<int32> queue_graphics_scores(queue_families.Size());
+			Vector<int32> queue_transfer_scores(queue_families.Size());
+			Vector<int32> queue_compute_scores(queue_families.Size());
+
+			for (uint32 index = 0; index < queue_families.Size(); index++)
+			{
+				auto& queue_family = queue_families[index];
+				queue_graphics_scores.Add(0);
+				queue_transfer_scores.Add(0);
+				queue_compute_scores.Add(0);
+
+				if (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				{
+					queue_graphics_scores[index] += 4;
+					queue_transfer_scores[index] -= 1;
+					queue_compute_scores[index] -= 1;
+				}
+				if (queue_family.queueFlags & VK_QUEUE_TRANSFER_BIT)
+				{
+					queue_graphics_scores[index] -= 1;
+					queue_transfer_scores[index] += 4;
+					queue_compute_scores[index] -= 1;
+				}
+				if (queue_family.queueFlags & VK_QUEUE_COMPUTE_BIT)
+				{
+					queue_graphics_scores[index] -= 1;
+					queue_transfer_scores[index] -= 1;
+					queue_compute_scores[index] += 4;
+				}
+			}
+
+			int32 best_queue_graphics_score = queue_graphics_scores[0];
+			int32 best_queue_transfer_score = queue_transfer_scores[0];
+			int32 best_queue_compute_score = queue_compute_scores[0];
+
+			for (uint32 index = 0; index < queue_families.Size(); index++)
+			{
+				if (queue_graphics_scores[index] >= best_queue_graphics_score)
+				{
+					best_queue_graphics_score = queue_graphics_scores[index];
+					if (best_queue_graphics_score > 0)
+					{
+						device.HasGraphicsQueueFamily = true;
+						device.GraphicsQueueFamilyIndex = index;
+
+						if (!(queue_families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) && !(queue_families[index].queueFlags & VK_QUEUE_COMPUTE_BIT))
+							device.IsGraphicsQueueFamilyIndexShared = false;
+					}
+				}
+				if (queue_transfer_scores[index] >= best_queue_transfer_score)
+				{
+					best_queue_transfer_score = queue_transfer_scores[index];
+					if (best_queue_transfer_score > 0)
+					{
+						device.HasTransferQueueFamily = true;
+						device.TransferQueueFamilyIndex = index;
+
+						if (!(queue_families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) && !(queue_families[index].queueFlags & VK_QUEUE_COMPUTE_BIT))
+							device.IsGraphicsQueueFamilyIndexShared = false;
+					}
+				}
+				if (queue_compute_scores[index] >= best_queue_compute_score)
+				{
+					best_queue_compute_score = queue_compute_scores[index];
+					if (best_queue_compute_score > 0)
+					{
+						device.HasComputeQueueFamily = true;
+						device.ComputeQueueFamilyIndex = index;
+
+						if (!(queue_families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) && !(queue_families[index].queueFlags & VK_QUEUE_TRANSFER_BIT))
+							device.IsGraphicsQueueFamilyIndexShared = false;
+					}
+				}
+			}
+		}
+
+		static PhysicalDevice PhysicalDevicePickBest(const Vector<VkPhysicalDevice>& devices, const Vector<const char*>& required_device_extensions)
 		{
 			uint32 best_score = 0;
 			PhysicalDevice picked_device;
@@ -76,7 +203,11 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 			{
 				uint32 device_score = 0;
 				PhysicalDevice device;
-				device.PhysicalDeviceHandle = device_handle;
+				device.Handle = device_handle;
+
+				// Device is not suitable, no matter the score.
+				if (!PhysicalDeviceHasAllExtensions(device, required_device_extensions))
+					continue;
 
 				VkPhysicalDeviceProperties device_properties;
 				vkGetPhysicalDeviceProperties(device_handle, &device_properties);
@@ -93,95 +224,19 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 				if (device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 					device_score += DeviceScoreWeight_IsDiscrete;
 
-				uint32 queue_families_count;
-				vkGetPhysicalDeviceQueueFamilyProperties(device_handle, &queue_families_count, nullptr);
+				PhysicalDeviceFindQueueFamilyIndices(device);
 
-				Vector<VkQueueFamilyProperties> queue_families;
-				queue_families.SetSizeUninitialized((SizeT)queue_families_count);
-				vkGetPhysicalDeviceQueueFamilyProperties(device_handle, &queue_families_count, queue_families.Data());
+				// Device is not suitable, no matter the score.
+				if (!device.HasGraphicsQueueFamily)
+					continue;
 
-				Vector<int32> queue_graphics_scores(queue_families.Size());
-				Vector<int32> queue_transfer_scores(queue_families.Size());
-				Vector<int32> queue_compute_scores(queue_families.Size());
-
-				for (uint32 index = 0; index < queue_families.Size(); index++)
-				{
-					auto& queue_family = queue_families[index];
-					queue_graphics_scores.Add(0);
-					queue_transfer_scores.Add(0);
-					queue_compute_scores.Add(0);
-
-					if (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-					{
-						queue_graphics_scores[index] += 3;
-						queue_transfer_scores[index] -= 1;
-						queue_compute_scores[index] -= 1;
-					}
-					if (queue_family.queueFlags & VK_QUEUE_TRANSFER_BIT)
-					{
-						queue_graphics_scores[index] -= 1;
-						queue_transfer_scores[index] += 3;
-						queue_compute_scores[index] -= 1;
-					}
-					if (queue_family.queueFlags & VK_QUEUE_COMPUTE_BIT)
-					{
-						queue_graphics_scores[index] -= 1;
-						queue_transfer_scores[index] -= 1;
-						queue_compute_scores[index] += 3;
-					}
-				}
-
-				int32 best_queue_graphics_score = queue_graphics_scores[0];
-				int32 best_queue_transfer_score = queue_transfer_scores[0];
-				int32 best_queue_compute_score = queue_compute_scores[0];
-
-				for (uint32 index = 0; index < queue_families.Size(); index++)
-				{
-					if (queue_graphics_scores[index] >= best_queue_graphics_score)
-					{
-						best_queue_graphics_score = queue_graphics_scores[index];
-						if (best_queue_graphics_score > 0)
-						{
-							device.HasGraphicsQueue = true;
-							device.GraphicsQueueIndex = index;
-
-							if (!(queue_families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) && !(queue_families[index].queueFlags & VK_QUEUE_COMPUTE_BIT))
-								device.IsGraphicsQueueShared = false;
-						}
-					}
-					if (queue_transfer_scores[index] >= best_queue_transfer_score)
-					{
-						best_queue_transfer_score = queue_transfer_scores[index];
-						if (best_queue_transfer_score > 0)
-						{
-							device.HasTransferQueue = true;
-							device.TransferQueueIndex = index;
-
-							if (!(queue_families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) && !(queue_families[index].queueFlags & VK_QUEUE_COMPUTE_BIT))
-								device.IsGraphicsQueueShared = false;
-						}
-					}
-					if (queue_compute_scores[index] >= best_queue_compute_score)
-					{
-						best_queue_compute_score = queue_compute_scores[index];
-						if (best_queue_compute_score > 0)
-						{
-							device.HasComputeQueue = true;
-							device.ComputeQueueIndex = index;
-
-							if (!(queue_families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) && !(queue_families[index].queueFlags & VK_QUEUE_TRANSFER_BIT))
-								device.IsGraphicsQueueShared = false;
-						}
-					}
-				}
-
-				if (device.HasGraphicsQueue)
+				if (device.HasGraphicsQueueFamily)
 					device_score += DeviceScoreWeight_HasGraphicsQueue;
 
-				if (device.HasTransferQueue)
+				if (device.HasTransferQueueFamily)
 					device_score += DeviceScoreWeight_HasTransferQueue;
 
-				if (device.HasComputeQueue)
+				if (device.HasComputeQueueFamily)
 					device_score += DeviceScoreWeight_HasComputeQueue;
 
 				if (device_score >= best_score)
@@ -234,7 +289,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		{
 			LF_RENDERER_TRACE("Required Vulkan extensions:");
 			for (auto& extension : extension_names)
-				LF_RENDERER_TRACE("    %{}", extension);
+				LF_RENDERER_TRACE("    - %{}", extension);
 		}
 
 		Vector<const char*> required_validation_layers;
@@ -324,7 +379,6 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		devices.SetSizeUninitialized(devices_count);
 		LF_VK_CHECK(vkEnumeratePhysicalDevices(s_VulkanData->Instance, &devices_count, devices.Data()));
 
-
 		// TODO (Avr): Macros.
 		if (devices.IsEmpty())
 		{
@@ -332,34 +386,45 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 			return false;
 		}
 
-		s_VulkanData->PhysicalDevice = Utils::PickBestPhysicalDevice(devices);
+		LF_RENDERER_INFO("Available GPUs:");
+		for (auto& device : devices)
+		{
+			VkPhysicalDeviceProperties properties;
+			vkGetPhysicalDeviceProperties(device, &properties);
+			LF_RENDERER_INFO("    - %{}", (const char*)properties.deviceName);
+		}
+
+		Vector<const char*> device_extensions;
+		device_extensions.Add(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+		s_VulkanData->PhysicalDevice = Utils::PhysicalDevicePickBest(devices, device_extensions);
 
 		// TODO (Avr): Macros.
-		if (s_VulkanData->PhysicalDevice.PhysicalDeviceHandle == VK_NULL_HANDLE)
+		if (s_VulkanData->PhysicalDevice.Handle == VK_NULL_HANDLE)
 		{
 			LF_RENDERER_FATAL("Failed to find a GPU with all the required Vulkan features! Aborting.");
 			return false;
 		}
 
 		VkPhysicalDeviceProperties gpu_properties = {};
-		vkGetPhysicalDeviceProperties(s_VulkanData->PhysicalDevice.PhysicalDeviceHandle, &gpu_properties);
+		vkGetPhysicalDeviceProperties(s_VulkanData->PhysicalDevice.Handle, &gpu_properties);
 		LF_RENDERER_INFO("Renderer Hardware: %{}", (const char*)(&gpu_properties.deviceName[0]));
 
 		LF_RENDERER_TRACE("Creating the Vulkan Logical Device...");
 
 		Vector<VkDeviceQueueCreateInfo> queue_create_infos = {};
 		Array<uint32, 3> required_queue_family_indices = {
-			s_VulkanData->PhysicalDevice.GraphicsQueueIndex,
-			s_VulkanData->PhysicalDevice.TransferQueueIndex,
-			s_VulkanData->PhysicalDevice.ComputeQueueIndex
+			s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex,
+			s_VulkanData->PhysicalDevice.TransferQueueFamilyIndex,
+			s_VulkanData->PhysicalDevice.ComputeQueueFamilyIndex
 		};
 
 		for (SizeT index = 0; index < required_queue_family_indices.Size(); index++)
 		{
 			bool created = false;
-			for (SizeT j = 0; j < index; j++)
+			for (auto& already_created_index : s_VulkanData->CreatedQueueFamilyIndices)
 			{
-				if (required_queue_family_indices[index] == required_queue_family_indices[j])
+				if (required_queue_family_indices[index] == already_created_index)
 				{
 					created = true;
 					break;
@@ -376,6 +441,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 			queue_create_info.pQueuePriorities = &queue_priority;
 
 			queue_create_infos.Add(queue_create_info);
+			s_VulkanData->CreatedQueueFamilyIndices.Add(required_queue_family_indices[index]);
 		}
 
 		VkDeviceCreateInfo device_create_info = {};
@@ -387,9 +453,6 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		device_create_info.queueCreateInfoCount = (uint32)queue_create_infos.Size();
 		device_create_info.pQueueCreateInfos = queue_create_infos.Data();
 
-		Vector<const char*> device_extensions;
-		device_extensions.Add(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-
 		device_create_info.enabledExtensionCount = (uint32)device_extensions.Size();
 		device_create_info.ppEnabledExtensionNames = device_extensions.Data();
 
@@ -397,13 +460,13 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		device_create_info.enabledLayerCount = 0;
 		device_create_info.ppEnabledLayerNames = nullptr;
 
-		LF_VK_CHECK_RETURN(vkCreateDevice(s_VulkanData->PhysicalDevice.PhysicalDeviceHandle, &device_create_info, nullptr, &s_VulkanData->LogicalDevice), false);
+		LF_VK_CHECK_RETURN(vkCreateDevice(s_VulkanData->PhysicalDevice.Handle, &device_create_info, nullptr, &s_VulkanData->LogicalDevice), false);
 		LF_RENDERER_INFO("Vulkan Logical Device created successfully.");
 
 		LF_RENDERER_TRACE("Aquiring the device queue handles...");
-		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.GraphicsQueueIndex, 0, &s_VulkanData->GraphicsQueue);
-		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.TransferQueueIndex, 0, &s_VulkanData->TransferQueue);
-		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.ComputeQueueIndex, 0, &s_VulkanData->ComputeQueue);
+		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex, 0, &s_VulkanData->GraphicsQueue);
+		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.TransferQueueFamilyIndex, 0, &s_VulkanData->TransferQueue);
+		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.ComputeQueueFamilyIndex, 0, &s_VulkanData->ComputeQueue);
 
 		LF_RENDERER_INFO("Renderer initialized successfully.");
 		return true;
@@ -448,11 +511,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		Result result;
 		Ref<VulkanContext> context = Ref<VulkanContext>::Create(specification, result);
 
-		if (result == Result::Success)
-			out_rendering_context = context.As<RenderingContext>();
-		else
-			out_rendering_context = nullptr;
-
+		out_rendering_context = (result == Result::Success) ? context.As<RenderingContext>() : nullptr;
 		return result;
 	}
 
@@ -460,10 +519,77 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		: RenderingContext(specification)
 	{
 		out_result = Result::Success;
+
+		LF_RENDERER_INFO("Creating a Vulkan Rendering Context...");
+		LF_RENDERER_TRACE("    |_ Owning window is '%{}' (NativeHandle: %{}).", m_Specification.Window->GetTitle().ToView(), m_Specification.Window->GetNativeHandle());
+
+		/** Platform switch. */
+#if LF_PLATFORM_WINDOWS
+		VkWin32SurfaceCreateInfoKHR surface_create_info = {};
+		surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+		surface_create_info.hwnd = (HWND)m_Specification.Window->GetNativeHandle();
+		surface_create_info.hinstance = (HINSTANCE)Platform::GetProcessHandle();
+
+		VkResult surface_result = vkCreateWin32SurfaceKHR(s_VulkanData->Instance, &surface_create_info, nullptr, &m_Surface);
+#elif LF_PLATFORM_LINUX
+#elif LF_PLATFORM_MACOS
+#endif
+
+		if (surface_result != VK_SUCCESS)
+		{
+			out_result = Result::Failure;
+			LF_RENDERER_FATAL("Failed to create the window surface!");
+			return;
+		}
+
+		LF_RENDERER_TRACE("Searching for the present device queue family index...");
+		bool has_present_queue = false;
+		uint32 present_queue_family_index = UINT32_MAX;
+
+		// NOTE (Avr): Try to have drawing and presentation in the the same queue for better performance.
+		VkBool32 supported = VK_FALSE;
+		vkGetPhysicalDeviceSurfaceSupportKHR(s_VulkanData->PhysicalDevice.Handle, s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex, m_Surface, &supported);
+		if (supported)
+		{
+			has_present_queue = true;
+			present_queue_family_index = s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex;
+		}
+
+		if (!has_present_queue)
+		{
+			uint32 queue_families_count;
+			vkGetPhysicalDeviceQueueFamilyProperties(s_VulkanData->PhysicalDevice.Handle, &queue_families_count, nullptr);
+
+			for (auto& queue_family_index : s_VulkanData->CreatedQueueFamilyIndices)
+			{
+				VkBool32 supported = VK_FALSE;
+				vkGetPhysicalDeviceSurfaceSupportKHR(s_VulkanData->PhysicalDevice.Handle, queue_family_index, m_Surface, &supported);
+				if (supported)
+				{
+					has_present_queue = true;
+					present_queue_family_index = s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex;
+					break;
+				}
+			}
+
+			if (!has_present_queue)
+			{
+				out_result = Result::Failure;
+				LF_RENDERER_FATAL("No device queue family has surface support!");
+				return;
+			}
+		}
+
+		vkGetDeviceQueue(s_VulkanData->LogicalDevice, present_queue_family_index, 0, &m_PresentQueue);
+		LF_RENDERER_INFO("The Vulkan Present Queue was aquired.");
 	}
 
 	VulkanContext::~VulkanContext()
 	{
+		LF_RENDERER_TRACE("Destroying a Vulkan Rendering Context...");
+		LF_RENDERER_TRACE("    |_ Owning window is '%{}' (NativeHandle: %{}).", m_Specification.Window->GetTitle().ToView(), m_Specification.Window->GetNativeHandle());
+
+		vkDestroySurfaceKHR(s_VulkanData->Instance, m_Surface, nullptr);
 	}
 
 	Result CreateFramebuffer(Ref<Framebuffer>& out_framebuffer, const FrambufferSpecification& specification)
@@ -471,17 +597,12 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		Result result;
 		Ref<VulkanFramebuffer> framebuffer = Ref<VulkanFramebuffer>::Create(specification, result);
 
-		if (result == Result::Success)
-			out_framebuffer = framebuffer.As<Framebuffer>();
-		else
-			out_framebuffer = nullptr;
-
+		out_framebuffer = (result == Result::Success) ? framebuffer.As<Framebuffer>() : nullptr;
 		return result;
 	}
 
 	VulkanFramebuffer::VulkanFramebuffer(const FrambufferSpecification& specification, Result& out_result)
 		: Framebuffer(specification)
-		, m_Handle(VK_NULL_HANDLE)
 	{
 		out_result = Result::Success;
 	}

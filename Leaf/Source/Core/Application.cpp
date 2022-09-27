@@ -137,10 +137,7 @@ namespace Leaf {
 
 	Unique<Window>& Application::CreateWindow(const WindowSpecification& specification)
 	{
-		m_WindowsRegistry.Add(Unique<Window>::Create(specification));
-		Unique<Window>& window = m_WindowsRegistry.Back();
-
-		return window;
+		return m_WindowsRegistry.Add(Unique<Window>::Create(specification));
 	}
 
 	Unique<Window>& Application::GetWindow(void* native_handle)

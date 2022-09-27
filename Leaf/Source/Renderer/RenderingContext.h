@@ -23,7 +23,7 @@ namespace Leaf { namespace Renderer {
 	public:
 		const RenderingContextSpecification& GetSpecification() const { return m_Specification; }
 
-	private:
+	protected:
 		RenderingContextSpecification m_Specification;
 	};
 

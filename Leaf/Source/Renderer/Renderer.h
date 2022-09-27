@@ -13,7 +13,8 @@ namespace Leaf { namespace Renderer {
 
 	enum class Result : int32
 	{
-		Success = 1
+		Success = 1,
+		Failure
 	};
 
 	enum class API

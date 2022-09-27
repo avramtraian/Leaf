@@ -21,7 +21,7 @@ namespace Leaf { namespace Renderer {
 	public:
 		const FrambufferSpecification& GetSpecification() const { return m_Specification; }
 
-	private:
+	protected:
 		FrambufferSpecification m_Specification;
 	};
 
