@@ -68,12 +68,21 @@ namespace Leaf {
 			LF_DEBUGBREAK();                                                           \
 			continue;                                                                  \
 		}
+
+#	define LF_ASSERT_AND(EXPRESSION, ...)                                          \
+		if (!(EXPRESSION))                                                             \
+		{                                                                              \
+			::Leaf::SubmitAssertionFailed(#EXPRESSION, LF_FILE, LF_FUNCTION, LF_LINE); \
+			LF_DEBUGBREAK();                                                           \
+			__VA_ARGS__                                                                \
+		}
 #else
 #	define LF_ASSERT(EXPRESSION) // Excluded from build.
 #	define LF_ASSERT_RETURN_VOID(EXPRESSION) // Excluded from build.
 #	define LF_ASSERT_RETURN(EXPRESSION, RETURN_VALUE) // Excluded from build.
 #	define LF_ASSERT_BREAK(EXPRESSION) // Excluded from build.
 #	define LF_ASSERT_CONTINUE(EXPRESSION) // Excluded from build.
+#	define LF_ASSERT_AND(EXPRESSION, ...) // Excluded from build.
 #endif
 
 #if LF_ENABLE_VERIFIES

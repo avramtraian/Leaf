@@ -15,6 +15,8 @@ namespace Leaf { namespace Renderer {
 		void(*Shutdown)() = nullptr;
 
 		Result(*CreateRenderingContext)(Ref<RenderingContext>&, const RenderingContextSpecification&) = nullptr;
+		Result(*RenderingContextCreateSwapchain)(Weak<RenderingContext>, const SwapchainSpecification&) = nullptr;
+
 		Result(*CreateFramebuffer)(Ref<Framebuffer>&, const FrambufferSpecification&) = nullptr;
 	};
 
@@ -39,8 +41,9 @@ namespace Leaf { namespace Renderer {
 			{
 				s_RendererData->CallTable.Initialize = VulkanRenderer::Initialize;
 				s_RendererData->CallTable.Shutdown = VulkanRenderer::Shutdown;
-				s_RendererData->CallTable.CreateFramebuffer = VulkanRenderer::CreateFramebuffer;
+				s_RendererData->CallTable.RenderingContextCreateSwapchain = VulkanRenderer::RenderingContextCreateSwapchain;
 				s_RendererData->CallTable.CreateRenderingContext = VulkanRenderer::CreateRenderingContext;
+				s_RendererData->CallTable.CreateFramebuffer = VulkanRenderer::CreateFramebuffer;
 				break;
 			}
 		}
@@ -62,6 +65,11 @@ namespace Leaf { namespace Renderer {
 	Result CreateRenderingContext(Ref<RenderingContext>& out_rendering_context, const RenderingContextSpecification& specification)
 	{
 		return s_RendererData->CallTable.CreateRenderingContext(out_rendering_context, specification);
+	}
+
+	Result RenderingContextCreateSwapchain(Weak<RenderingContext> rendering_context, const SwapchainSpecification& specification)
+	{
+		return s_RendererData->CallTable.RenderingContextCreateSwapchain(rendering_context, specification);
 	}
 
 	Result CreateFramebuffer(Ref<Framebuffer>& out_framebuffer, const FrambufferSpecification& specification)

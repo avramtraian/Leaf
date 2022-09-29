@@ -12,10 +12,12 @@ namespace Leaf { namespace Renderer {
 
 	class Framebuffer : public RefCounted
 	{
-	public:
+	protected:
 		Framebuffer(const FrambufferSpecification& specification)
 			: m_Specification(specification)
 		{}
+
+	public:
 		virtual ~Framebuffer() = default;
 
 	public:

@@ -30,9 +30,25 @@
 			LF_DEBUGBREAK();                            \
 			return (RETURN_VALUE);                      \
 		}
+
+#	define LF_VK_CHECK_RETURN_VOID(EXPRESSION) \
+		if ((EXPRESSION) != VK_SUCCESS)        \
+		{                                      \
+			LF_DEBUGBREAK();                   \
+			return;                            \
+		}
+
+#	define LF_VK_CHECK_AND(EXPRESSION, ...) \
+		if ((EXPRESSION) != VK_SUCCESS)            \
+		{                                          \
+			LF_DEBUGBREAK();                       \
+			__VA_ARGS__                            \
+		}
 #else
 #	define LF_VK_CHECK(EXPRESSION)                      EXPRESSION
 #	define LF_VK_CHECK_RETURN(EXPRESSION, RETURN_VALUE) EXPRESSION
+#	define LF_VK_CHECK_RETURN_VOID(EXPRESSION)          EXPRESSION
+#	define LF_VK_CHECK_AND(EXPRESSION, ...)         EXPRESSION
 #endif
 
 namespace Leaf { namespace Renderer { namespace VulkanRenderer {
@@ -42,10 +58,30 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 	void Shutdown();
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////// RENDERING CONTEXT /////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////// SWAPCHAIN /////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	Result CreateRenderingContext(Ref<RenderingContext>& out_rendering_context, const RenderingContextSpecification& specification);
+	class VulkanSwapchain : public Swapchain
+	{
+	public:
+		VulkanSwapchain(const SwapchainSpecification& specification, class VulkanContext* context, Result& out_result);
+		virtual ~VulkanSwapchain() override;
+
+	private:
+		VkSwapchainKHR m_Handle = VK_NULL_HANDLE;
+
+		class VulkanContext* m_OwningContext = nullptr;
+
+		Vector<VkImage> m_Images;
+
+		Vector<VkImageView> m_ImageViews;
+	};
+
+	Result CreateSwapchain(Ref<VulkanSwapchain>& out_swapchain, class VulkanContext* context, const SwapchainSpecification& specification);
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////// RENDERING CONTEXT /////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	class VulkanContext : public RenderingContext
 	{
@@ -56,14 +92,25 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 	private:
 		VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
 
+		uint32 m_PresentQueueFamilyIndex = UINT32_MAX;
+
 		VkQueue m_PresentQueue = VK_NULL_HANDLE;
+
+		Ref<VulkanSwapchain> m_Swapchain;
+
+	private:
+		friend class VulkanSwapchain;
+
+		friend Result RenderingContextCreateSwapchain(Weak<RenderingContext>, const SwapchainSpecification&);
 	};
+
+	Result CreateRenderingContext(Ref<RenderingContext>& out_rendering_context, const RenderingContextSpecification& specification);
+
+	Result RenderingContextCreateSwapchain(Weak<RenderingContext> rendering_context, const SwapchainSpecification& specification);
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////// FRAMEBUFFER ///////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	Result CreateFramebuffer(Ref<Framebuffer>& out_framebuffer, const FrambufferSpecification& specification);
 
 	class VulkanFramebuffer : public Framebuffer
 	{
@@ -74,5 +121,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 	private:
 		VkFramebuffer m_Handle = VK_NULL_HANDLE;
 	};
+
+	Result CreateFramebuffer(Ref<Framebuffer>& out_framebuffer, const FrambufferSpecification& specification);
 
 } } }

@@ -166,6 +166,9 @@ namespace Leaf {
 
 		Renderer::CreateRenderingContext(m_RenderingContext, rendering_context_specification);
 
+		Renderer::SwapchainSpecification swapchain_spec;
+		Renderer::RenderingContextCreateSwapchain(m_RenderingContext, swapchain_spec);
+
 		RECT window_rect;
 		GetWindowRect((HWND)m_NativeHandle, &window_rect);
 

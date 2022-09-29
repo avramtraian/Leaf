@@ -124,6 +124,9 @@ namespace Leaf {
 	private:
 		static_assert(std::is_base_of_v<RefCounted, T>, "T must be derived from RefCounted!");
 		T* m_Pointer;
+
+	private:
+		friend class Weak;
 	};
 
 }

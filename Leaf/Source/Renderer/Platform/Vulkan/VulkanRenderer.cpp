@@ -4,6 +4,7 @@
 #include "VulkanRenderer.h"
 
 #include "Core/Platform/Platform.h"
+#include "Core/Math/Math.h"
 
 /** Platform switch. */
 #if LF_PLATFORM_WINDOWS
@@ -19,17 +20,21 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 	{
 		VkPhysicalDevice Handle = VK_NULL_HANDLE;
 
-		bool HasGraphicsQueueFamily = false;
-		bool IsGraphicsQueueFamilyIndexShared = true;
-		uint32 GraphicsQueueFamilyIndex = UINT32_MAX;
+		struct
+		{
+			bool HasGraphicsQueueFamily = false;
+			bool IsGraphicsQueueFamilyIndexShared = true;
+			uint32 GraphicsQueueFamilyIndex = UINT32_MAX;
 
-		bool HasTransferQueueFamily = false;
-		bool IsTransferQueueFamilyIndexShared = true;
-		uint32 TransferQueueFamilyIndex = UINT32_MAX;
+			bool HasTransferQueueFamily = false;
+			bool IsTransferQueueFamilyIndexShared = true;
+			uint32 TransferQueueFamilyIndex = UINT32_MAX;
 
-		bool HasComputeQueueFamily = false;
-		bool IsComputeQueueFamilyIndexShared = true;
-		uint32 ComputeQueueFamilyIndex = UINT32_MAX;
+			bool HasComputeQueueFamily = false;
+			bool IsComputeQueueFamilyIndexShared = true;
+			uint32 ComputeQueueFamilyIndex = UINT32_MAX;
+		}
+		QueueFamilies;
 	};
 
 	struct VulkanRendererData
@@ -160,11 +165,11 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 					best_queue_graphics_score = queue_graphics_scores[index];
 					if (best_queue_graphics_score > 0)
 					{
-						device.HasGraphicsQueueFamily = true;
-						device.GraphicsQueueFamilyIndex = index;
+						device.QueueFamilies.HasGraphicsQueueFamily = true;
+						device.QueueFamilies.GraphicsQueueFamilyIndex = index;
 
 						if (!(queue_families[index].queueFlags & VK_QUEUE_TRANSFER_BIT) && !(queue_families[index].queueFlags & VK_QUEUE_COMPUTE_BIT))
-							device.IsGraphicsQueueFamilyIndexShared = false;
+							device.QueueFamilies.IsGraphicsQueueFamilyIndexShared = false;
 					}
 				}
 				if (queue_transfer_scores[index] >= best_queue_transfer_score)
@@ -172,11 +177,11 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 					best_queue_transfer_score = queue_transfer_scores[index];
 					if (best_queue_transfer_score > 0)
 					{
-						device.HasTransferQueueFamily = true;
-						device.TransferQueueFamilyIndex = index;
+						device.QueueFamilies.HasTransferQueueFamily = true;
+						device.QueueFamilies.TransferQueueFamilyIndex = index;
 
 						if (!(queue_families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) && !(queue_families[index].queueFlags & VK_QUEUE_COMPUTE_BIT))
-							device.IsGraphicsQueueFamilyIndexShared = false;
+							device.QueueFamilies.IsGraphicsQueueFamilyIndexShared = false;
 					}
 				}
 				if (queue_compute_scores[index] >= best_queue_compute_score)
@@ -184,11 +189,11 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 					best_queue_compute_score = queue_compute_scores[index];
 					if (best_queue_compute_score > 0)
 					{
-						device.HasComputeQueueFamily = true;
-						device.ComputeQueueFamilyIndex = index;
+						device.QueueFamilies.HasComputeQueueFamily = true;
+						device.QueueFamilies.ComputeQueueFamilyIndex = index;
 
 						if (!(queue_families[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) && !(queue_families[index].queueFlags & VK_QUEUE_TRANSFER_BIT))
-							device.IsGraphicsQueueFamilyIndexShared = false;
+							device.QueueFamilies.IsGraphicsQueueFamilyIndexShared = false;
 					}
 				}
 			}
@@ -227,16 +232,16 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 				PhysicalDeviceFindQueueFamilyIndices(device);
 
 				// Device is not suitable, no matter the score.
-				if (!device.HasGraphicsQueueFamily)
+				if (!device.QueueFamilies.HasGraphicsQueueFamily)
 					continue;
 
-				if (device.HasGraphicsQueueFamily)
+				if (device.QueueFamilies.HasGraphicsQueueFamily)
 					device_score += DeviceScoreWeight_HasGraphicsQueue;
 
-				if (device.HasTransferQueueFamily)
+				if (device.QueueFamilies.HasTransferQueueFamily)
 					device_score += DeviceScoreWeight_HasTransferQueue;
 
-				if (device.HasComputeQueueFamily)
+				if (device.QueueFamilies.HasComputeQueueFamily)
 					device_score += DeviceScoreWeight_HasComputeQueue;
 
 				if (device_score >= best_score)
@@ -414,9 +419,9 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 
 		Vector<VkDeviceQueueCreateInfo> queue_create_infos = {};
 		Array<uint32, 3> required_queue_family_indices = {
-			s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex,
-			s_VulkanData->PhysicalDevice.TransferQueueFamilyIndex,
-			s_VulkanData->PhysicalDevice.ComputeQueueFamilyIndex
+			s_VulkanData->PhysicalDevice.QueueFamilies.GraphicsQueueFamilyIndex,
+			s_VulkanData->PhysicalDevice.QueueFamilies.TransferQueueFamilyIndex,
+			s_VulkanData->PhysicalDevice.QueueFamilies.ComputeQueueFamilyIndex
 		};
 
 		for (SizeT index = 0; index < required_queue_family_indices.Size(); index++)
@@ -464,9 +469,9 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		LF_RENDERER_INFO("Vulkan Logical Device created successfully.");
 
 		LF_RENDERER_TRACE("Aquiring the device queue handles...");
-		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex, 0, &s_VulkanData->GraphicsQueue);
-		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.TransferQueueFamilyIndex, 0, &s_VulkanData->TransferQueue);
-		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.ComputeQueueFamilyIndex, 0, &s_VulkanData->ComputeQueue);
+		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.QueueFamilies.GraphicsQueueFamilyIndex, 0, &s_VulkanData->GraphicsQueue);
+		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.QueueFamilies.TransferQueueFamilyIndex, 0, &s_VulkanData->TransferQueue);
+		vkGetDeviceQueue(s_VulkanData->LogicalDevice, s_VulkanData->PhysicalDevice.QueueFamilies.ComputeQueueFamilyIndex, 0, &s_VulkanData->ComputeQueue);
 
 		LF_RENDERER_INFO("Renderer initialized successfully.");
 		return true;
@@ -506,14 +511,210 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		LF_RENDERER_INFO("Renderer was shut down.");
 	}
 
-	Result CreateRenderingContext(Ref<RenderingContext>& out_rendering_context, const RenderingContextSpecification& specification)
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////// SWAPCHAIN /////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	namespace Utils {
+
+		struct SwapchainSupport
+		{
+			VkSurfaceCapabilitiesKHR Capabilities = {};
+			Vector<VkSurfaceFormatKHR> Formats;
+			Vector<VkPresentModeKHR> PresentModes;
+		};
+
+		static void SwapchainQueryPhysicalDeviceForSupport(VkSurfaceKHR surface, SwapchainSupport& out_support, Result& out_result)
+		{
+			LF_VK_CHECK_AND(
+				vkGetPhysicalDeviceSurfaceCapabilitiesKHR(s_VulkanData->PhysicalDevice.Handle, surface, &out_support.Capabilities),
+
+				LF_RENDERER_ERROR("Failed to aquire the VkPhysicalDeviceSurfaceCapabilities!");
+			out_result = Result::Failure;
+			return;
+			);
+
+			uint32 formats_count;
+			vkGetPhysicalDeviceSurfaceFormatsKHR(s_VulkanData->PhysicalDevice.Handle, surface, &formats_count, nullptr);
+			out_support.Formats.SetSizeUninitialized(formats_count);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(s_VulkanData->PhysicalDevice.Handle, surface, &formats_count, out_support.Formats.Data());
+
+			uint32 present_modes_count;
+			vkGetPhysicalDeviceSurfacePresentModesKHR(s_VulkanData->PhysicalDevice.Handle, surface, &present_modes_count, nullptr);
+			out_support.PresentModes.SetSizeUninitialized(present_modes_count);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(s_VulkanData->PhysicalDevice.Handle, surface, &present_modes_count, out_support.PresentModes.Data());
+		}
+
+	}
+
+	VulkanSwapchain::VulkanSwapchain(const SwapchainSpecification& specification, class VulkanContext* context, Result& out_result)
+		: Swapchain(specification)
+		, m_OwningContext(context)
+	{
+		out_result = Result::Success;
+
+		LF_RENDERER_TRACE("Creating the Vulkan Swapchain...");
+
+		LF_RENDERER_TRACE("Querying the physical device for Vulkan Surface Support...");
+		Utils::SwapchainSupport support;
+		Utils::SwapchainQueryPhysicalDeviceForSupport(m_OwningContext->m_Surface, support, out_result);
+
+		if (out_result != Result::Success)
+		{
+			LF_RENDERER_ERROR("Failed to query the swapchain support!");
+			return;
+		}
+		if (support.Formats.IsEmpty())
+		{
+			out_result = Result::Failure;
+			LF_RENDERER_ERROR("The selected device has no supported swapchain formats!");
+			return;
+		}
+		if (support.PresentModes.IsEmpty())
+		{
+			out_result = Result::Failure;
+			LF_RENDERER_ERROR("The selected device has no supported swapchain present modes!");
+			return;
+		}
+
+		// NOTE (Avr): If the ideal format is not available, the first format is usually good enough.
+		VkSurfaceFormatKHR surface_format = support.Formats[0];
+		for (auto& format : support.Formats)
+		{
+			if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+				surface_format = format;
+		}
+
+		// NOTE (Avr): Guaranteed to be available.
+		VkPresentModeKHR present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+		for (auto& pm : support.PresentModes)
+		{
+			if (pm == VK_PRESENT_MODE_FIFO_KHR)
+				present_mode = pm;
+		}
+
+		VkExtent2D extent = support.Capabilities.currentExtent;
+		if (support.Capabilities.currentExtent.width == UINT32_MAX)
+		{
+			extent.width  = Math::Clamp(m_OwningContext->m_Specification.Window->GetWidth(),  support.Capabilities.minImageExtent.width,  support.Capabilities.maxImageExtent.width);
+			extent.height = Math::Clamp(m_OwningContext->m_Specification.Window->GetHeight(), support.Capabilities.minImageExtent.height, support.Capabilities.maxImageExtent.height);
+		}
+
+		uint32 image_count = support.Capabilities.minImageCount + 1;
+		if (support.Capabilities.maxImageCount > 0 && image_count > support.Capabilities.maxImageCount)
+			image_count = support.Capabilities.maxImageCount;
+
+		VkSwapchainCreateInfoKHR sc_create_info = {};
+		sc_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+
+		sc_create_info.minImageCount = image_count;
+		sc_create_info.imageFormat = surface_format.format;
+		sc_create_info.imageColorSpace = surface_format.colorSpace;
+		sc_create_info.imageExtent = extent;
+		sc_create_info.imageArrayLayers = 1;
+		sc_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+		if (s_VulkanData->PhysicalDevice.QueueFamilies.GraphicsQueueFamilyIndex != m_OwningContext->m_PresentQueueFamilyIndex)
+		{
+			uint32 queue_family_indices[2] =
+			{
+				s_VulkanData->PhysicalDevice.QueueFamilies.GraphicsQueueFamilyIndex,
+				m_OwningContext->m_PresentQueueFamilyIndex
+			};
+
+			sc_create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			sc_create_info.queueFamilyIndexCount = sizeof(queue_family_indices) / sizeof(queue_family_indices[0]);
+			sc_create_info.pQueueFamilyIndices = queue_family_indices;
+		}
+		else
+		{
+			sc_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			sc_create_info.queueFamilyIndexCount = 0;
+			sc_create_info.pQueueFamilyIndices = nullptr;
+		}
+
+		sc_create_info.preTransform = support.Capabilities.currentTransform;
+		sc_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
+		sc_create_info.presentMode = present_mode;
+		sc_create_info.clipped = VK_TRUE;
+
+		sc_create_info.surface = m_OwningContext->m_Surface;
+		sc_create_info.oldSwapchain = VK_NULL_HANDLE;
+
+		LF_VK_CHECK_AND(
+			vkCreateSwapchainKHR(s_VulkanData->LogicalDevice, &sc_create_info, nullptr, &m_Handle),
+
+			LF_RENDERER_ERROR("Failed to create the Vulkan Swapchain!");
+			out_result = Result::Failure;
+			return;
+		);
+
+		LF_RENDERER_INFO("Vulkan Swapchain created successfully.");
+
+		LF_RENDERER_TRACE("VulkanSwapchain::VulkanSwapchain: Creating the views for the swapchain's images.");
+		uint32 swapchain_images_count;
+		vkGetSwapchainImagesKHR(s_VulkanData->LogicalDevice, m_Handle, &swapchain_images_count, nullptr);
+		m_Images.SetSizeUninitialized(swapchain_images_count);
+		vkGetSwapchainImagesKHR(s_VulkanData->LogicalDevice, m_Handle, &swapchain_images_count, m_Images.Data());
+
+		m_ImageViews.SetSize(m_Images.Size());
+		for (SizeT index = 0; index < m_Images.Size(); index++)
+		{
+			VkImageViewCreateInfo iv_create_info = {};
+			iv_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+
+			iv_create_info.image = m_Images[index];
+			iv_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			iv_create_info.format = surface_format.format;
+
+			iv_create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			iv_create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			iv_create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			iv_create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+			iv_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			iv_create_info.subresourceRange.levelCount = 1;
+			iv_create_info.subresourceRange.baseMipLevel = 0;
+			iv_create_info.subresourceRange.layerCount = 1;
+			iv_create_info.subresourceRange.baseArrayLayer = 0;
+
+			LF_VK_CHECK_AND(
+				vkCreateImageView(s_VulkanData->LogicalDevice, &iv_create_info, nullptr, &m_ImageViews[index]),
+
+				LF_RENDERER_ERROR("VulkanSwapchain::VulkanSwapchain: Failed to create an image view!");
+				out_result = Result::Failure;
+				return;
+			);
+		}
+
+		LF_RENDERER_INFO("VulkanSwapchain::VulkanSwapchain: Swapchain's images' views created.");
+	}
+
+	VulkanSwapchain::~VulkanSwapchain()
+	{
+		LF_RENDERER_TRACE("Destroying the Vulkan Swapchain...");
+
+		for (auto& image_view : m_ImageViews)
+			vkDestroyImageView(s_VulkanData->LogicalDevice, image_view, nullptr);
+
+		vkDestroySwapchainKHR(s_VulkanData->LogicalDevice, m_Handle, nullptr);
+
+		LF_RENDERER_INFO("The Vulkan Swapchain was destroyed.");
+	}
+
+	Result CreateSwapchain(Ref<VulkanSwapchain>& out_swapchain, VulkanContext* context, const SwapchainSpecification& specification)
 	{
 		Result result;
-		Ref<VulkanContext> context = Ref<VulkanContext>::Create(specification, result);
+		Ref<VulkanSwapchain> swapchain = Ref<VulkanSwapchain>::Create(specification, context, result);
 
-		out_rendering_context = (result == Result::Success) ? context.As<RenderingContext>() : nullptr;
+		out_swapchain = (result == Result::Success) ? swapchain : nullptr;
 		return result;
 	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////// RENDERING CONTEXT /////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	VulkanContext::VulkanContext(const RenderingContextSpecification& specification, Result& out_result)
 		: RenderingContext(specification)
@@ -544,15 +745,14 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 
 		LF_RENDERER_TRACE("Searching for the present device queue family index...");
 		bool has_present_queue = false;
-		uint32 present_queue_family_index = UINT32_MAX;
 
 		// NOTE (Avr): Try to have drawing and presentation in the the same queue for better performance.
 		VkBool32 supported = VK_FALSE;
-		vkGetPhysicalDeviceSurfaceSupportKHR(s_VulkanData->PhysicalDevice.Handle, s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex, m_Surface, &supported);
+		vkGetPhysicalDeviceSurfaceSupportKHR(s_VulkanData->PhysicalDevice.Handle, s_VulkanData->PhysicalDevice.QueueFamilies.GraphicsQueueFamilyIndex, m_Surface, &supported);
 		if (supported)
 		{
 			has_present_queue = true;
-			present_queue_family_index = s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex;
+			m_PresentQueueFamilyIndex = s_VulkanData->PhysicalDevice.QueueFamilies.GraphicsQueueFamilyIndex;
 		}
 
 		if (!has_present_queue)
@@ -567,7 +767,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 				if (supported)
 				{
 					has_present_queue = true;
-					present_queue_family_index = s_VulkanData->PhysicalDevice.GraphicsQueueFamilyIndex;
+					m_PresentQueueFamilyIndex = s_VulkanData->PhysicalDevice.QueueFamilies.GraphicsQueueFamilyIndex;
 					break;
 				}
 			}
@@ -580,7 +780,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 			}
 		}
 
-		vkGetDeviceQueue(s_VulkanData->LogicalDevice, present_queue_family_index, 0, &m_PresentQueue);
+		vkGetDeviceQueue(s_VulkanData->LogicalDevice, m_PresentQueueFamilyIndex, 0, &m_PresentQueue);
 		LF_RENDERER_INFO("The Vulkan Present Queue was aquired.");
 	}
 
@@ -589,17 +789,41 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		LF_RENDERER_TRACE("Destroying a Vulkan Rendering Context...");
 		LF_RENDERER_TRACE("    |_ Owning window is '%{}' (NativeHandle: %{}).", m_Specification.Window->GetTitle().ToView(), m_Specification.Window->GetNativeHandle());
 
+		m_Swapchain.Release();
+
 		vkDestroySurfaceKHR(s_VulkanData->Instance, m_Surface, nullptr);
+
+		LF_RENDERER_INFO("A Vulkan Rendering Context was destroyed.");
+		LF_RENDERER_TRACE("    |_ Owning window is '%{}' (NativeHandle: %{}).", m_Specification.Window->GetTitle().ToView(), m_Specification.Window->GetNativeHandle());
 	}
 
-	Result CreateFramebuffer(Ref<Framebuffer>& out_framebuffer, const FrambufferSpecification& specification)
+	Result CreateRenderingContext(Ref<RenderingContext>& out_rendering_context, const RenderingContextSpecification& specification)
 	{
 		Result result;
-		Ref<VulkanFramebuffer> framebuffer = Ref<VulkanFramebuffer>::Create(specification, result);
+		Ref<VulkanContext> context = Ref<VulkanContext>::Create(specification, result);
 
-		out_framebuffer = (result == Result::Success) ? framebuffer.As<Framebuffer>() : nullptr;
+		out_rendering_context = (result == Result::Success) ? context.As<RenderingContext>() : nullptr;
 		return result;
 	}
+
+	Result RenderingContextCreateSwapchain(Weak<RenderingContext> rendering_context, const SwapchainSpecification& specification)
+	{
+		VulkanContext* context = rendering_context.As<VulkanContext>().Get();
+
+		Result result = CreateSwapchain(context->m_Swapchain, context, specification);
+		LF_ASSERT_AND(
+			result == Result::Success,
+
+			LF_RENDERER_ERROR("RenderingContextCreateSwapchain: Failed to create the Vulkan Swapchain!");
+			return result;
+		);
+
+		return Result::Success;
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////// FRAMEBUFFER ///////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	VulkanFramebuffer::VulkanFramebuffer(const FrambufferSpecification& specification, Result& out_result)
 		: Framebuffer(specification)
@@ -609,6 +833,15 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 
 	VulkanFramebuffer::~VulkanFramebuffer()
 	{
+	}
+
+	Result CreateFramebuffer(Ref<Framebuffer>& out_framebuffer, const FrambufferSpecification& specification)
+	{
+		Result result;
+		Ref<VulkanFramebuffer> framebuffer = Ref<VulkanFramebuffer>::Create(specification, result);
+
+		out_framebuffer = (result == Result::Success) ? framebuffer.As<Framebuffer>() : nullptr;
+		return result;
 	}
 
 } } }
