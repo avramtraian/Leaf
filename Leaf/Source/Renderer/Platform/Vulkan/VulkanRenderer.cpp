@@ -6,6 +6,8 @@
 #include "Core/Platform/Platform.h"
 #include "Core/Math/Math.h"
 
+#include <shaderc/shaderc.hpp>
+
 /** Platform switch. */
 #if LF_PLATFORM_WINDOWS
 #	include "Core/Platform/Windows/WindowsHeaders.h"
@@ -819,6 +821,63 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		);
 
 		return Result::Success;
+	}
+
+	Weak<VulkanContext> GetContext()
+	{
+		return Renderer::GetActiveRenderingContext().As<VulkanContext>();
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////// SHADER /////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	namespace Utils {
+
+
+
+	}
+
+	VulkanShader::VulkanShader(const ShaderSpecification& specification, Result& out_result)
+		: Shader(specification)
+	{
+		out_result = Result::Success;
+	}
+
+	VulkanShader::~VulkanShader()
+	{
+	}
+
+	Result CreateShader(Ref<Shader>& out_shader, const ShaderSpecification& specification)
+	{
+		Result result;
+		Ref<VulkanShader> shader = Ref<VulkanShader>::Create(specification, result);
+
+		out_shader = (result == Result::Success) ? shader.As<Shader>() : nullptr;
+		return result;
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////// PIPELINE ////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	VulkanPipeline::VulkanPipeline(const PipelineSpecification& specification, Result& out_result)
+		: Pipeline(specification)
+	{
+		out_result = Result::Success;
+	}
+
+	VulkanPipeline::~VulkanPipeline()
+	{
+	}
+
+	Result CreatePipeline(Ref<Pipeline>& out_pipeline, const PipelineSpecification& specification)
+	{
+		Result result;
+		Ref<VulkanPipeline> pipeline = Ref<VulkanPipeline>::Create(specification, result);
+
+		out_pipeline = (result == Result::Success) ? pipeline.As<Pipeline>() : nullptr;
+		return result;
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

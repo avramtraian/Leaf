@@ -165,6 +165,7 @@ namespace Leaf {
 		rendering_context_specification.Window = this;
 
 		Renderer::CreateRenderingContext(m_RenderingContext, rendering_context_specification);
+		Renderer::SetActiveRenderingContext(m_RenderingContext);
 
 		Renderer::SwapchainSpecification swapchain_spec;
 		Renderer::RenderingContextCreateSwapchain(m_RenderingContext, swapchain_spec);

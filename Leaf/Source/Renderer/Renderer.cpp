@@ -17,12 +17,16 @@ namespace Leaf { namespace Renderer {
 		Result(*CreateRenderingContext)(Ref<RenderingContext>&, const RenderingContextSpecification&) = nullptr;
 		Result(*RenderingContextCreateSwapchain)(Weak<RenderingContext>, const SwapchainSpecification&) = nullptr;
 
+		Result(*CreatePipeline)(Ref<Pipeline>&, const PipelineSpecification&) = nullptr;
+
 		Result(*CreateFramebuffer)(Ref<Framebuffer>&, const FrambufferSpecification&) = nullptr;
 	};
 
 	struct RendererData
 	{
 		RendererCallTable CallTable;
+
+		Weak<RenderingContext> ActiveRenderingContext;
 	};
 	static RendererData* s_RendererData = nullptr;
 
@@ -41,8 +45,12 @@ namespace Leaf { namespace Renderer {
 			{
 				s_RendererData->CallTable.Initialize = VulkanRenderer::Initialize;
 				s_RendererData->CallTable.Shutdown = VulkanRenderer::Shutdown;
+
 				s_RendererData->CallTable.RenderingContextCreateSwapchain = VulkanRenderer::RenderingContextCreateSwapchain;
 				s_RendererData->CallTable.CreateRenderingContext = VulkanRenderer::CreateRenderingContext;
+
+				s_RendererData->CallTable.CreatePipeline = VulkanRenderer::CreatePipeline;
+
 				s_RendererData->CallTable.CreateFramebuffer = VulkanRenderer::CreateFramebuffer;
 				break;
 			}
@@ -70,6 +78,21 @@ namespace Leaf { namespace Renderer {
 	Result RenderingContextCreateSwapchain(Weak<RenderingContext> rendering_context, const SwapchainSpecification& specification)
 	{
 		return s_RendererData->CallTable.RenderingContextCreateSwapchain(rendering_context, specification);
+	}
+
+	Weak<RenderingContext> GetActiveRenderingContext()
+	{
+		return s_RendererData->ActiveRenderingContext;
+	}
+
+	void SetActiveRenderingContext(Weak<RenderingContext> rendering_context)
+	{
+		s_RendererData->ActiveRenderingContext = rendering_context;
+	}
+
+	Result CreatePipeline(Ref<Pipeline>& out_pipeline, const PipelineSpecification& specification)
+	{
+		return s_RendererData->CallTable.CreatePipeline(out_pipeline, specification);
 	}
 
 	Result CreateFramebuffer(Ref<Framebuffer>& out_framebuffer, const FrambufferSpecification& specification)
