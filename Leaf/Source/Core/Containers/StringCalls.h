@@ -9,7 +9,7 @@ namespace Leaf {
 
 	namespace StringCalls {
 
-		LEAF_API uint64 Length(const char* string);
+		LEAF_API SizeT Length(const char* string);
 
 		LEAF_API bool Equals(const char* string_a, const char* string_b);
 
@@ -24,16 +24,16 @@ namespace Leaf {
 	namespace StringCalls_Templated {
 
 		template<typename CharType>
-		inline uint64 Length(const CharType* string);
+		inline SizeT Length(const CharType* string);
 
 		template<>
-		inline uint64 Length(const char* string)
+		inline SizeT Length(const char* string)
 		{
 			return StringCalls::Length(string);
 		}
 
 		template<>
-		inline uint64 Length(const wchar_t* string)
+		inline SizeT Length(const wchar_t* string)
 		{
 			return StringCalls_Wide::Length(string);
 		}

@@ -5,7 +5,7 @@
 
 namespace Leaf {
 
-	uint64 StringCalls::Length(const char* string)
+	SizeT StringCalls::Length(const char* string)
 	{
 		const char* new_string = string;
 		while (*(new_string++));
