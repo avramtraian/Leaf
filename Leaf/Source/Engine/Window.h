@@ -34,7 +34,7 @@ namespace Leaf {
 	struct WindowSpecification
 	{
 		/** The window title. */
-		String Title;
+		StringUTF8 Title;
 
 		/** The window available area width. */
 		uint32 Width = 0;
@@ -132,8 +132,8 @@ namespace Leaf {
 		*/
 		void SetPositionY(int32 new_position_y);
 
-		const String& GetTitle() const { return m_Specification.Title; }
-		void SetTitle(StringView new_title);
+		const StringUTF8& GetTitle() const { return m_Specification.Title; }
+		void SetTitle(StringViewUTF8 new_title);
 
 		bool IsPrimary() const { return m_Specification.Flags & WINDOW_FLAG_Primary; }
 		void SetPrimary(bool primary);

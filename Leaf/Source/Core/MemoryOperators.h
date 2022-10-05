@@ -17,7 +17,7 @@ void* operator new (size_t size, const char* file, const char* function, Leaf::u
 }
 
 // NOTE (Avr): In Debug configuration, VMA also defines this operator, causing a linking error.
-#if !LF_CONFIGURATION_DEBUG
+#if !LF_CONFIGURATION_DEBUG || !LF_BUILD_CORE_LIBRARY
 void* operator new (size_t, void* address) noexcept
 {
 	return address;

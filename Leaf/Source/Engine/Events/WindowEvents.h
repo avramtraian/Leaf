@@ -62,15 +62,15 @@ namespace Leaf {
 		static EventType GetStaticEventType() { return EventType::WindowTitleChanged; }
 
 	public:
-		WindowTitleChangedEvent(StringView title)
+		WindowTitleChangedEvent(StringViewUTF8 title)
 			: Event(GetStaticEventType())
 			, m_Title(title)
 		{}
 
-		StringView GetTitle() const { return m_Title; }
+		StringViewUTF8 GetTitle() const { return m_Title; }
 
 	private:
-		StringView m_Title;
+		StringViewUTF8 m_Title;
 	};
 
 	class LEAF_API WindowClosedEvent : public Event

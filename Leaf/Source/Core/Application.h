@@ -26,7 +26,7 @@ namespace Leaf {
 	struct ApplicationSpecification
 	{
 		/** The application name. */
-		String Name;
+		StringUTF8 Name;
 
 		/** The command line arguments passed to the executable. */
 		CommandLineArguments CommandArguments;

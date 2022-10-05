@@ -67,19 +67,19 @@ namespace Leaf {
 		s_LoggerData = nullptr;
 	}
 
-	void Logger::Submit(LogType type, StringView tag, StringView message)
+	void Logger::Submit(LogType type, StringViewUTF8 tag, StringViewUTF8 message)
 	{
 		SystemTime sys_time;
 		Platform::GetLocalSystemTime(sys_time);
 
-		String result = String::Format(
-			"[%{,2}:%{,2}:%{,2}][%{}][%{}]:%{} %{}\n",
+		StringUTF8 result = StringUTF8::Format(
+			"[{,2}:{,2}:{,2}][{}][{}]:{} {}\n",
 			sys_time.Hour, sys_time.Minute, sys_time.Second,
 			LoggerData::LogTypeToString_ANSI[(uint8)type], tag, LoggerData::LogTypeWhitespace_ANSI[(uint8)type], message
 		);
 
 		Platform::SetConsoleColor(LoggerData::LogTypeConsoleColors[(uint8)type].A, LoggerData::LogTypeConsoleColors[(uint8)type].B);
-		Platform::SubmitTextToConsole_ANSI(result.ToView());
+		Platform::SubmitTextToConsole_UTF8(result);
 	}
 
 }

@@ -70,16 +70,16 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 			switch (messageSeverity)
 			{
 				case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-					// LF_RENDERER_TRACE("%{}", (const char*)pCallbackData->pMessage);
+					// LF_RENDERER_TRACE("{}", (const char*)pCallbackData->pMessage);
 					break;
 				case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-					// LF_RENDERER_INFO("%{}", (const char*)pCallbackData->pMessage);
+					// LF_RENDERER_INFO("{}", (const char*)pCallbackData->pMessage);
 					break;
 				case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-					LF_RENDERER_WARN("%{}", (const char*)pCallbackData->pMessage);
+					LF_RENDERER_WARN("{}", (const char*)pCallbackData->pMessage);
 					break;
 				case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-					LF_RENDERER_ERROR("%{}", (const char*)pCallbackData->pMessage);
+					LF_RENDERER_ERROR("{}", (const char*)pCallbackData->pMessage);
 					break;
 			}
 
@@ -102,7 +102,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 
 				for (auto& available_extension : device_extensions)
 				{
-					if (StringCalls::Equals(required_extension, available_extension.extensionName))
+					if (StringCalls_UTF8::Equals(required_extension, available_extension.extensionName))
 					{
 						was_found = true;
 						break;
@@ -296,7 +296,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		{
 			LF_RENDERER_TRACE("Required Vulkan extensions:");
 			for (auto& extension : extension_names)
-				LF_RENDERER_TRACE("    - %{}", extension);
+				LF_RENDERER_TRACE("    |_ {}", extension);
 		}
 
 		Vector<const char*> required_validation_layers;
@@ -316,12 +316,12 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		// Ensures that all the required validation layers are available.
 		for (auto& required_layer : required_validation_layers)
 		{
-			LF_RENDERER_TRACE("Checking that layer '%{}' is available...", required_layer);
+			LF_RENDERER_TRACE("Checking that layer '{}' is available...", required_layer);
 
 			bool was_found = false;
 			for (auto& available_layer : available_layers)
 			{
-				if (StringCalls::Equals(required_layer, available_layer.layerName))
+				if (StringCalls_UTF8::Equals(required_layer, available_layer.layerName))
 				{
 					was_found = true;
 					break;
@@ -330,7 +330,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 
 			if (!was_found)
 			{
-				LF_RENDERER_FATAL("Required validation layer '%{}' is missing!", required_layer);
+				LF_RENDERER_FATAL("Required validation layer '{}' is missing!", required_layer);
 				return false;
 			}
 		}
@@ -398,7 +398,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		{
 			VkPhysicalDeviceProperties properties;
 			vkGetPhysicalDeviceProperties(device, &properties);
-			LF_RENDERER_INFO("    - %{}", (const char*)properties.deviceName);
+			LF_RENDERER_INFO("    |_ {}", (const char*)properties.deviceName);
 		}
 
 		Vector<const char*> device_extensions;
@@ -415,7 +415,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 
 		VkPhysicalDeviceProperties gpu_properties = {};
 		vkGetPhysicalDeviceProperties(s_VulkanData->PhysicalDevice.Handle, &gpu_properties);
-		LF_RENDERER_INFO("Renderer Hardware: %{}", (const char*)(&gpu_properties.deviceName[0]));
+		LF_RENDERER_INFO("Renderer Hardware: {}", (const char*)(&gpu_properties.deviceName[0]));
 
 		LF_RENDERER_TRACE("Creating the Vulkan Logical Device...");
 
@@ -724,7 +724,7 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 		out_result = Result::Success;
 
 		LF_RENDERER_INFO("Creating a Vulkan Rendering Context...");
-		LF_RENDERER_TRACE("    |_ Owning window is '%{}' (NativeHandle: %{}).", m_Specification.Window->GetTitle().ToView(), m_Specification.Window->GetNativeHandle());
+		LF_RENDERER_TRACE("    |_ Owning window is '{}' (NativeHandle: {}).", m_Specification.Window->GetTitle(), m_Specification.Window->GetNativeHandle());
 
 		/** Platform switch. */
 #if LF_PLATFORM_WINDOWS
@@ -789,14 +789,14 @@ namespace Leaf { namespace Renderer { namespace VulkanRenderer {
 	VulkanContext::~VulkanContext()
 	{
 		LF_RENDERER_TRACE("Destroying a Vulkan Rendering Context...");
-		LF_RENDERER_TRACE("    |_ Owning window is '%{}' (NativeHandle: %{}).", m_Specification.Window->GetTitle().ToView(), m_Specification.Window->GetNativeHandle());
+		LF_RENDERER_TRACE("    |_ Owning window is '{}' (NativeHandle: {}).", m_Specification.Window->GetTitle(), m_Specification.Window->GetNativeHandle());
 
 		m_Swapchain.Release();
 
 		vkDestroySurfaceKHR(s_VulkanData->Instance, m_Surface, nullptr);
 
 		LF_RENDERER_INFO("A Vulkan Rendering Context was destroyed.");
-		LF_RENDERER_TRACE("    |_ Owning window is '%{}' (NativeHandle: %{}).", m_Specification.Window->GetTitle().ToView(), m_Specification.Window->GetNativeHandle());
+		LF_RENDERER_TRACE("    |_ Owning window is '{}' (NativeHandle: {}).", m_Specification.Window->GetTitle(), m_Specification.Window->GetNativeHandle());
 	}
 
 	Result CreateRenderingContext(Ref<RenderingContext>& out_rendering_context, const RenderingContextSpecification& specification)

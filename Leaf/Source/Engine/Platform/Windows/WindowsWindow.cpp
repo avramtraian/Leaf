@@ -213,7 +213,7 @@ namespace Leaf {
 		SetWindowPos((HWND)m_NativeHandle, NULL, m_Specification.PositionX - win_data->PaddingLeft, new_position_y - win_data->PaddingTop, 0, 0, SWP_NOSIZE);
 	}
 
-	void Window::SetTitle(StringView new_title)
+	void Window::SetTitle(StringViewUTF8 new_title)
 	{
 		SetWindowTextA((HWND)m_NativeHandle, new_title.CStr());
 	}

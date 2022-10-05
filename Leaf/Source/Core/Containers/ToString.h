@@ -3,46 +3,57 @@
 
 #pragma once
 
-#include "StringCalls.h"
-
 namespace Leaf {
 
-	template<typename T, typename CharType, typename AllocatorType>
+	template<typename T, typename Encoding>
 	struct ToString
 	{
 	public:
-		/*
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const T& value, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const T& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			out_result.Append(OBJECT_AS_STRING);
+			// Specialize ToString<T, Encoding> in order to format this type.
+			LF_ASSERT(false);
 		}
-		*/
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<uint64, CharType, AllocatorType>
-	{
-	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const uint64& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+	namespace Utils {
+
+		template<typename Encoding>
+		static bool ParseStringAsUnsignedInteger(StringViewBase<Encoding> string, SizeT& out_value)
 		{
-			CharType result_data[64] = {};
-			uint8 result_offset = 0;
+			out_value = 0;
 
-			uint8 digits[32] = {};
-			uint8 digits_count = 0;
-
-			uint64 value = v;
-
-			while (value != 0)
+			SizeT index = 0;
+			for (SizeT offset = 0; offset < string.Length(); offset++)
 			{
-				digits[digits_count++] = value % 10;
-				value /= 10;
+				int32 codepoint;
+				uint8 advance;
+				Encoding::StringCallsClass::BytesToCodepoint(string.CStr() + index, codepoint, advance);
+				index += advance;
+
+				if ('0' > codepoint || codepoint > '9')
+					return false;
+
+				out_value *= 10;
+				out_value += (codepoint - '0');
 			}
 
-			constexpr uint8 DefaultMinDigitsCount = 1;
-			uint8 min_digits_count = 0;
-			bool use_default_flags = true;
+			return true;
+		}
 
+	}
+
+	template<typename Encoding>
+	struct ToString<uint64, Encoding>
+	{
+	public:
+		static void Get(const uint64& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
+		{
+			using Char = Encoding::CharacterType;
+
+			uint8 min_digits_count = 1;
+
+			// Flags parsing.
 			if (!flags.IsEmpty())
 			{
 				switch (flags.CStr()[0])
@@ -53,70 +64,77 @@ namespace Leaf {
 					}
 					case ',':
 					{
-						use_default_flags = flags.Length() <= 1;
+						SizeT mdg;
+						if (Utils::ParseStringAsUnsignedInteger(StringViewBase<Encoding>(flags.CStr() + 1, flags.Length() - 1), mdg))
+							min_digits_count = (uint8)(mdg);
+						else
+							return;
 
-						for (SizeT index = 1; index < flags.Length(); index++)
-						{
-							if ('9' < flags.CStr()[index] || flags.CStr()[index] < '0')
-							{
-								out_result.Append("@@INVALID_FLAGS@@");
-								return;
-							}
-
-							min_digits_count *= 10;
-							min_digits_count += flags.CStr()[index] - '0';
-						}
 						break;
 					}
 					default:
 					{
-						out_result.Append("@@INVALID_FLAGS@@");
 						return;
 					}
 				}
 			}
 
-			if (use_default_flags)
-				min_digits_count = DefaultMinDigitsCount;
+			Char result_data[64] = {};
+			uint8 result_offset = 0;
+
+			uint8 digits[32] = {};
+			uint8 digits_count = 0;
+
+			uint64 v = value;
+
+			while (v != 0)
+			{
+				digits[digits_count++] = v % 10;
+				v /= 10;
+			}
 
 			for (int16 index = 0; index < min_digits_count - digits_count; index++)
 				result_data[result_offset++] = '0';
 
 			for (uint8 index = 0; index < digits_count; index++)
-			{
 				result_data[result_offset++] = '0' + digits[digits_count - index - 1];
-			}
 
-			out_result.Append(BasicStringView<CharType>(result_data, result_offset));
+			// The result is composed only from ASCII-equivalent codepoints.
+			// So, we can use the offset as its length, since it has a fixed width (of 1) on all available encodings.
+			out_result.Append(StringViewBase<Encoding>(result_data, result_offset));
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<int64, CharType, AllocatorType>
+	template<typename Encoding>
+	struct ToString<int64, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const int64& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const int64& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			int64 value = v;
+			using Char = Encoding::CharacterType;
+
+			int64 v = value;
 			if (v < 0)
 			{
-				out_result.AppendChar('-');
-				value *= -1;
+				v = -v;
+
+				Char c = '-';
+				out_result.AppendChar(&c, 1);
 			}
 
-			ToString<uint64, CharType, AllocatorType>::Get(out_result, (uint64)value, flags);
+			ToString<uint64, Encoding>::Get((uint64)v, out_result, flags);
 		}
 	};
 
-#define LF_DECL_INTEGER_TO_STRING(TYPE, CAST_TYPE)                                                                                                      \
-	template<typename CharType, typename AllocatorType>                                                                                                 \
-	struct ToString<TYPE, CharType, AllocatorType>                                                                                                      \
-	{                                                                                                                                                   \
-	public:                                                                                                                                             \
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const TYPE& v, BasicStringView<CharType> flags = BasicStringView<CharType>()) \
-		{                                                                                                                                               \
-			ToString<CAST_TYPE, CharType, AllocatorType>::Get(out_result, (CAST_TYPE)v, flags);                                                         \
-		}                                                                                                                                               \
+#define LF_DECL_INTEGER_TO_STRING(TYPE, CAST_TYPE)                                                            \
+	template<typename Encoding>                                                                               \
+	struct ToString<TYPE, Encoding>                                                                           \
+	{                                                                                                         \
+	public:                                                                                                   \
+		static void Get(const TYPE& v, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {}) \
+		{                                                                                                     \
+			ToString<CAST_TYPE, Encoding>::Get((CAST_TYPE)v, out_result, flags);                              \
+		}                                                                                                     \
 	}
 
 	LF_DECL_INTEGER_TO_STRING(uint8,  uint64);
@@ -127,17 +145,21 @@ namespace Leaf {
 	LF_DECL_INTEGER_TO_STRING(int16,  int64);
 	LF_DECL_INTEGER_TO_STRING(int32,  int64);
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<double, CharType, AllocatorType>
+	template<typename Encoding>
+	struct ToString<double, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const double& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const double& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			double value = v;
-			if (value < 0.0)
+			using Char = Encoding::CharacterType;
+
+			double v = value;
+			if (v < 0.0)
 			{
-				value *= -1.0;
-				out_result.AppendChar('-');
+				v *= -1.0;
+
+				Char c = '-';
+				out_result.AppendChar(&c, 1);
 			}
 
 			int16 exponent = 0;
@@ -145,34 +167,32 @@ namespace Leaf {
 			constexpr double ScientificMaxThreshold = 1e8;
 			constexpr double ScientificMinThreshold = 1e-8;
 
-			if (value >= ScientificMaxThreshold)
+			if (v >= ScientificMaxThreshold)
 			{
-				if (value >= 1e256) { value *= (1.0 / 1e256); exponent += 256; }
-				if (value >= 1e128) { value *= (1.0 / 1e128); exponent += 128; }
-				if (value >= 1e64 ) { value *= (1.0 / 1e64);  exponent += 64;  }
-				if (value >= 1e32 ) { value *= (1.0 / 1e32);  exponent += 32;  }
-				if (value >= 1e16 ) { value *= (1.0 / 1e16);  exponent += 16;  }
-				if (value >= 1e8  ) { value *= (1.0 / 1e8);   exponent += 8;   }
-				if (value >= 1e4  ) { value *= (1.0 / 1e4);   exponent += 4;   }
-				if (value >= 1e2  ) { value *= (1.0 / 1e2);   exponent += 2;   }
-				if (value >= 1e1  ) { value *= (1.0 / 1e1);   exponent += 1;   }
+				if (v >= 1e256) { v *= (1.0 / 1e256); exponent += 256; }
+				if (v >= 1e128) { v *= (1.0 / 1e128); exponent += 128; }
+				if (v >= 1e64 ) { v *= (1.0 / 1e64);  exponent += 64;  }
+				if (v >= 1e32 ) { v *= (1.0 / 1e32);  exponent += 32;  }
+				if (v >= 1e16 ) { v *= (1.0 / 1e16);  exponent += 16;  }
+				if (v >= 1e8  ) { v *= (1.0 / 1e8);   exponent += 8;   }
+				if (v >= 1e4  ) { v *= (1.0 / 1e4);   exponent += 4;   }
+				if (v >= 1e2  ) { v *= (1.0 / 1e2);   exponent += 2;   }
+				if (v >= 1e1  ) { v *= (1.0 / 1e1);   exponent += 1;   }
 			}
-			else if (value <= ScientificMinThreshold)
+			else if (v <= ScientificMinThreshold)
 			{
-				if (value <= 1e-256) { value *= 1e256; exponent -= 256; }
-				if (value <= 1e-128) { value *= 1e128; exponent -= 128; }
-				if (value <= 1e-64)  { value *= 1e64;  exponent -= 64; }
-				if (value <= 1e-32)  { value *= 1e32;  exponent -= 32; }
-				if (value <= 1e-16)  { value *= 1e16;  exponent -= 16; }
-				if (value <= 1e-8)   { value *= 1e8;   exponent -= 8; }
-				if (value <= 1e-4)   { value *= 1e4;   exponent -= 4; }
-				if (value <= 1e-2)   { value *= 1e2;   exponent -= 2; }
-				if (value <= 1e-1)   { value *= 1e1;   exponent -= 1; }
+				if (v <= 1e-256) { v *= 1e256; exponent -= 256; }
+				if (v <= 1e-128) { v *= 1e128; exponent -= 128; }
+				if (v <= 1e-64)  { v *= 1e64;  exponent -= 64; }
+				if (v <= 1e-32)  { v *= 1e32;  exponent -= 32; }
+				if (v <= 1e-16)  { v *= 1e16;  exponent -= 16; }
+				if (v <= 1e-8)   { v *= 1e8;   exponent -= 8; }
+				if (v <= 1e-4)   { v *= 1e4;   exponent -= 4; }
+				if (v <= 1e-2)   { v *= 1e2;   exponent -= 2; }
+				if (v <= 1e-1)   { v *= 1e1;   exponent -= 1; }
 			}
 
-			constexpr uint8 DefaultDecimalPrecision = 3;
-			uint8 decimal_precision = 0;
-			bool use_default_flags = true;
+			uint8 decimal_precision = 3;
 
 			if (!flags.IsEmpty())
 			{
@@ -184,32 +204,20 @@ namespace Leaf {
 					}
 					case '.':
 					{
-						use_default_flags = flags.Length() <= 1;
-
-						for (SizeT index = 1; index < flags.Length(); index++)
-						{
-							if ('9' < flags.CStr()[index] || flags.CStr()[index] < '0')
-							{
-								out_result.Append("@@INVALID_FLAGS@@");
-								return;
-							}
-
-							decimal_precision *= 10;
-							decimal_precision += flags.CStr()[index] - '0';
-						}
+						SizeT dp;
+						if (Utils::ParseStringAsUnsignedInteger(StringViewBase<Encoding>(flags.CStr() + 1, flags.Length() - 1), dp))
+							decimal_precision = (uint8)(dp);
+						else
+							return;
 
 						break;
 					}
 					default:
 					{
-						out_result.Append("@@INVALID_FLAGS@@");
 						return;
 					}
 				}
 			}
-
-			if (use_default_flags)
-				decimal_precision = DefaultDecimalPrecision;
 
 			double decimal_multiplier = 1.0;
 			for (uint8 index = 0; index < decimal_precision; index++)
@@ -218,170 +226,224 @@ namespace Leaf {
 			uint64 integral = (uint64)value;
 			uint64 decimal = (uint64)((value - (double)integral) * decimal_multiplier);
 
-			ToString<uint64, CharType, AllocatorType>::Get(out_result, integral);
+			ToString<uint64, Encoding>::Get(integral, out_result);
 
 			if (decimal > 0)
 			{
-				out_result.AppendChar('.');
-				ToString<uint64, CharType, AllocatorType>::Get(out_result, decimal);
+				Char c = '.';
+				out_result.AppendChar(&c, 1);
+				ToString<uint64, Encoding>::Get(decimal, out_result);
 			}
 
 			if (exponent != 0)
 			{
-				out_result.AppendChar('e');
-				ToString<int16, CharType, AllocatorType>::Get(out_result, exponent);
+				Char c = 'e';
+				out_result.AppendChar(&c, 1);
+				ToString<int16, Encoding>::Get(exponent, out_result);
 			}
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<float, CharType, AllocatorType>
+	template<typename Encoding>
+	struct ToString<float, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const float& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const float& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			ToString<double, CharType, AllocatorType>::Get(out_result, (double)v, flags);
+			ToString<double, Encoding>::Get((double)(value), out_result, flags);
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<bool, CharType, AllocatorType>
+	template<typename Encoding>
+	struct ToString<void*, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const bool& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(void* const& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			if (v)
-			{
-				out_result.SetMaxSize(out_result.MaxSize() + 4);
-				out_result.AppendChar('t');
-				out_result.AppendChar('r');
-				out_result.AppendChar('u');
-				out_result.AppendChar('e');
-			}
-			else
-			{
-				out_result.SetMaxSize(out_result.MaxSize() + 5);
-				out_result.AppendChar('f');
-				out_result.AppendChar('a');
-				out_result.AppendChar('l');
-				out_result.AppendChar('s');
-				out_result.AppendChar('e');
-			}
-		}
-	};
+			// 16 on 64-bit architectures; 8 on 32-bit.
+			constexpr SizeT PointerDigitsCount = sizeof(void*) * 2;
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<const void*, CharType, AllocatorType>
-	{
-	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const void* const& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
-		{
-			uint64 ptr_val = (uint64)v;
-			CharType buffer[sizeof(void*) * 2 + 1] = {};
-			buffer[sizeof(void*) * 2] = 0;
+			using Char = Encoding::CharacterType;
 
-			for (SizeT index = 0; index < sizeof(void*) * 2; index++)
+			// Since we store only ASCII-equivalent codepoints, we will only have fixed-width (of 1) characters.
+			Char buffer[PointerDigitsCount] = {};
+
+			uint64 v = (uint64)(value);
+			for (SizeT index = 0; index < PointerDigitsCount; index++)
 			{
-				uint8 digit = ptr_val % 16;
-				ptr_val /= 16;
+				uint8 digit = v % 16;
+				v /= 16;
 
-				if (digit < 10)
-					buffer[sizeof(void*) * 2 - index - 1] = '0' + digit;
+				if (digit <= 9)
+					buffer[PointerDigitsCount - index - 1] = '0' + digit;
 				else
-					buffer[sizeof(void*) * 2 - index - 1] = 'A' + (digit - 10);
+					buffer[PointerDigitsCount - index - 1] = 'A' + (digit - 10);
 			}
 
-			out_result.Append(buffer);
+			out_result.Append(StringViewBase<Encoding>(buffer, PointerDigitsCount));
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<void*, CharType, AllocatorType>
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////// UTF-8 Strings ///////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	template<typename Encoding>
+	struct ToString<StringViewUTF8, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, void* const& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const StringViewUTF8& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			ToString<const void*, CharType, AllocatorType>::Get(out_result, v, flags);
+			SizeT index = 0;
+			for (SizeT offset = 0; offset < value.Length(); offset++)
+			{
+				int32 codepoint;
+				uint8 advance;
+				StringCalls_UTF8::BytesToCodepoint(value.CStr() + index, codepoint, advance);
+				index += advance;
+
+				using Char = Encoding::CharacterType;
+				Char buffer[8] = {};
+				uint8 character_width;
+				Encoding::StringCallsClass::CodepointToBytes(codepoint, buffer, character_width);
+				out_result.AppendChar(buffer, character_width);
+			}
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<BasicStringView<char>, CharType, AllocatorType>
+	template<typename Encoding>
+	class StringBase;
+	using StringUTF8 = StringBase<UTF8Encoding>;
+
+	template<typename Encoding>
+	struct ToString<StringUTF8, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const BasicStringView<char>& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const StringUTF8& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			SizeT result_length = out_result.Length();
-
-			out_result.SetMaxSize(result_length + v.Length() + 1);
-
-			CharType* result_data = out_result.Data();
-
-			for (SizeT index = 0; index < v.Length(); index++)
-				result_data[result_length++] = (CharType)v.Data()[index];
-			result_data[result_length] = 0;
-
-			out_result.SetSizeInternal(result_length + 1);
+			ToString<StringViewUTF8, Encoding>::Get(StringViewUTF8(value), out_result, flags);
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<BasicString<char, AllocatorType>, CharType, AllocatorType>
+	template<typename Encoding>
+	struct ToString<const char*, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const BasicString<char, AllocatorType>& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const char* const& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			ToString<BasicStringView<char>, CharType, AllocatorType>::Get(out_result, v.ToView(), flags);
+			ToString<StringViewUTF8, Encoding>::Get(StringViewUTF8(value), out_result, flags);
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<const char*, CharType, AllocatorType>
+	template<typename Encoding>
+	struct ToString<char*, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const char* const& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(char* const& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			ToString<BasicStringView<char>, CharType, AllocatorType>::Get(out_result, v, flags);
+			ToString<StringViewUTF8, Encoding>::Get(StringViewUTF8(value), out_result, flags);
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<BasicStringView<wchar_t>, CharType, AllocatorType>
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////// UTF-16 Strings //////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	template<typename Encoding>
+	struct ToString<StringViewUTF16, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const BasicStringView<wchar_t>& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const StringViewUTF16& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			SizeT result_length = out_result.Length();
+			SizeT index = 0;
+			for (SizeT offset = 0; offset < value.Length(); offset++)
+			{
+				int32 codepoint;
+				uint8 advance;
+				StringCalls_UTF16::BytesToCodepoint(value.CStr() + index, codepoint, advance);
+				index += advance;
 
-			out_result.SetMaxSize(result_length + v.Length() + 1);
-
-			CharType* result_data = out_result.Data();
-
-			for (SizeT index = 0; index < v.Length(); index++)
-				result_data[result_length++] = (CharType)v.Data()[index];
-			result_data[result_length] = 0;
-
-			out_result.SetSizeInternal(result_length + 1);
+				using Char = Encoding::CharacterType;
+				Char buffer[8] = {};
+				uint8 character_width;
+				Encoding::StringCallsClass::CodepointToBytes(codepoint, buffer, character_width);
+				out_result.AppendChar(buffer, character_width);
+			}
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<BasicString<wchar_t, AllocatorType>, CharType, AllocatorType>
+	template<typename Encoding>
+	class StringBase;
+	using StringUTF16 = StringBase<UTF16Encoding>;
+
+	template<typename Encoding>
+	struct ToString<StringUTF16, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const BasicString<wchar_t, AllocatorType>& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const StringUTF16& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			ToString<BasicStringView<wchar_t>, CharType, AllocatorType>::Get(out_result, v.ToView(), flags);
+			ToString<StringViewUTF16, Encoding>::Get(StringViewUTF16(value), out_result, flags);
 		}
 	};
 
-	template<typename CharType, typename AllocatorType>
-	struct ToString<const wchar_t*, CharType, AllocatorType>
+	template<typename Encoding>
+	struct ToString<const wchar_t*, Encoding>
 	{
 	public:
-		static void Get(BasicString<CharType, AllocatorType>& out_result, const wchar_t* const& v, BasicStringView<CharType> flags = BasicStringView<CharType>())
+		static void Get(const wchar_t* const& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
 		{
-			ToString<BasicStringView<wchar_t>, CharType, AllocatorType>::Get(out_result, v, flags);
+			ToString<StringViewUTF16, Encoding>::Get(StringViewUTF16(value), out_result, flags);
+		}
+	};
+
+	template<typename Encoding>
+	struct ToString<wchar_t*, Encoding>
+	{
+	public:
+		static void Get(wchar_t* const& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
+		{
+			ToString<StringViewUTF16, Encoding>::Get(StringViewUTF16(value), out_result, flags);
+		}
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////// ASCII Strings ///////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	template<typename Encoding>
+	struct ToString<StringViewASCII, Encoding>
+	{
+	public:
+		static void Get(const StringViewASCII& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
+		{
+			SizeT index = 0;
+			for (SizeT offset = 0; offset < value.Length(); offset++)
+			{
+				int32 codepoint;
+				uint8 advance;
+				StringCalls_ASCII::BytesToCodepoint(value.CStr() + index, codepoint, advance);
+				index += advance;
+
+				using Char = Encoding::CharacterType;
+				Char buffer[8] = {};
+				uint8 character_width;
+				Encoding::StringCallsClass::CodepointToBytes(codepoint, buffer, character_width);
+				out_result.AppendChar(buffer, character_width);
+			}
+		}
+	};
+
+	template<typename Encoding>
+	class StringBase;
+	using StringASCII = StringBase<ASCIIEncoding>;
+
+	template<typename Encoding>
+	struct ToString<StringASCII, Encoding>
+	{
+	public:
+		static void Get(const StringASCII& value, StringBase<Encoding>& out_result, StringViewBase<Encoding> flags = {})
+		{
+			ToString<StringViewASCII, Encoding>::Get(StringViewASCII(value), out_result, flags);
 		}
 	};
 
