@@ -1,0 +1,103 @@
+// Copyright to Avram Traian. 2022 - 2022.
+// File created on September 2 2022.
+
+#include "Renderer.h"
+
+#include "Platform/Vulkan/VulkanRenderer.h"
+
+namespace Leaf { namespace Renderer {
+
+	RendererConfiguration Config;
+
+	struct RendererCallTable
+	{
+		bool(*Initialize)() = nullptr;
+		void(*Shutdown)() = nullptr;
+
+		Result(*CreateRenderingContext)(Ref<RenderingContext>&, const RenderingContextSpecification&) = nullptr;
+		Result(*RenderingContextCreateSwapchain)(Weak<RenderingContext>, const SwapchainSpecification&) = nullptr;
+
+		Result(*CreatePipeline)(Ref<Pipeline>&, const PipelineSpecification&) = nullptr;
+
+		Result(*CreateFramebuffer)(Ref<Framebuffer>&, const FrambufferSpecification&) = nullptr;
+	};
+
+	struct RendererData
+	{
+		RendererCallTable CallTable;
+
+		Weak<RenderingContext> ActiveRenderingContext;
+	};
+	static RendererData* s_RendererData = nullptr;
+
+	bool Initialize()
+	{
+		if (s_RendererData)
+			return false;
+
+		s_RendererData = lnew RendererData();
+		if (!s_RendererData)
+			return false;
+
+		switch (Config.RenderingAPI)
+		{
+			case API::Vulkan:
+			{
+				s_RendererData->CallTable.Initialize = VulkanRenderer::Initialize;
+				s_RendererData->CallTable.Shutdown = VulkanRenderer::Shutdown;
+
+				s_RendererData->CallTable.RenderingContextCreateSwapchain = VulkanRenderer::RenderingContextCreateSwapchain;
+				s_RendererData->CallTable.CreateRenderingContext = VulkanRenderer::CreateRenderingContext;
+
+				s_RendererData->CallTable.CreatePipeline = VulkanRenderer::CreatePipeline;
+
+				s_RendererData->CallTable.CreateFramebuffer = VulkanRenderer::CreateFramebuffer;
+				break;
+			}
+		}
+
+		return s_RendererData->CallTable.Initialize();
+	}
+
+	void Shutdown()
+	{
+		if (!s_RendererData)
+			return;
+
+		s_RendererData->CallTable.Shutdown();
+
+		ldelete s_RendererData;
+		s_RendererData = nullptr;
+	}
+
+	Result CreateRenderingContext(Ref<RenderingContext>& out_rendering_context, const RenderingContextSpecification& specification)
+	{
+		return s_RendererData->CallTable.CreateRenderingContext(out_rendering_context, specification);
+	}
+
+	Result RenderingContextCreateSwapchain(Weak<RenderingContext> rendering_context, const SwapchainSpecification& specification)
+	{
+		return s_RendererData->CallTable.RenderingContextCreateSwapchain(rendering_context, specification);
+	}
+
+	Weak<RenderingContext> GetActiveRenderingContext()
+	{
+		return s_RendererData->ActiveRenderingContext;
+	}
+
+	void SetActiveRenderingContext(Weak<RenderingContext> rendering_context)
+	{
+		s_RendererData->ActiveRenderingContext = rendering_context;
+	}
+
+	Result CreatePipeline(Ref<Pipeline>& out_pipeline, const PipelineSpecification& specification)
+	{
+		return s_RendererData->CallTable.CreatePipeline(out_pipeline, specification);
+	}
+
+	Result CreateFramebuffer(Ref<Framebuffer>& out_framebuffer, const FrambufferSpecification& specification)
+	{
+		return s_RendererData->CallTable.CreateFramebuffer(out_framebuffer, specification);
+	}
+
+} }

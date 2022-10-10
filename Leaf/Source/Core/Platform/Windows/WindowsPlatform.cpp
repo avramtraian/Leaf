@@ -112,7 +112,7 @@ namespace Leaf {
 		SetConsoleTextAttribute(s_PlatformData->ConsoleHandle, Utils::ConsoleFlags(s_PlatformData->CurrentConsoleColors[0], s_PlatformData->CurrentConsoleColors[1]));
 	}
 
-	void Platform::SubmitTextToConsole_ANSI(StringView text)
+	void Platform::SubmitTextToConsole_UTF8(StringViewUTF8 text)
 	{
 		if (s_PlatformData->ConsoleHandle == INVALID_HANDLE_VALUE)
 			return;

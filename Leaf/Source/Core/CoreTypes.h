@@ -54,6 +54,8 @@ namespace Leaf {
 
 	constexpr SizeT LF_INVALID_SIZE = static_cast<SizeT>(-1);
 
+#	define SIZE_MAX (0xFFFFFFFFFFFFFFFFU)
+
 	template<typename T>
 	struct RemoveReference
 	{

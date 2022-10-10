@@ -42,35 +42,35 @@
 #if LF_ENABLE_RENDERER_LOG_DEBUG
 #	define LF_RENDERER_DEBUG(...) ::Leaf::Logger::Submit(::Leaf::Logger::LogType::Debug, "RENDERER", __VA_ARGS__)
 #else
-#	define LF_RENDERER_DEBUG(...) // Exclude from build.
+#	define LF_RENDERER_DEBUG(...) // Excluded from build.
 #endif
 
 #if LF_ENABLE_RENDERER_LOG_TRACE
 #	define LF_RENDERER_TRACE(...) ::Leaf::Logger::Submit(::Leaf::Logger::LogType::Trace, "RENDERER", __VA_ARGS__)
 #else
-#	define LF_RENDERER_TRACE(...) // Exclude from build.
+#	define LF_RENDERER_TRACE(...) // Excluded from build.
 #endif
 
 #if LF_ENABLE_RENDERER_LOG_INFO
 #	define LF_RENDERER_INFO(...) ::Leaf::Logger::Submit(::Leaf::Logger::LogType::Info, "RENDERER", __VA_ARGS__)
 #else
-#	define LF_RENDERER_INFO(...) // Exclude from build.
+#	define LF_RENDERER_INFO(...) // Excluded from build.
 #endif
 
 #if LF_ENABLE_RENDERER_LOG_WARN
 #	define LF_RENDERER_WARN(...) ::Leaf::Logger::Submit(::Leaf::Logger::LogType::Warn, "RENDERER", __VA_ARGS__)
 #else
-#	define LF_RENDERER_WARN(...) // Exclude from build.
+#	define LF_RENDERER_WARN(...) // Excluded from build.
 #endif
 
 #if LF_ENABLE_RENDERER_LOG_ERROR
 #	define LF_RENDERER_ERROR(...) ::Leaf::Logger::Submit(::Leaf::Logger::LogType::Error, "RENDERER", __VA_ARGS__)
 #else
-#	define LF_RENDERER_ERROR(...) // Exclude from build.
+#	define LF_RENDERER_ERROR(...) // Excluded from build.
 #endif
 
 #if LF_ENABLE_RENDERER_LOG_FATAL
 #	define LF_RENDERER_FATAL(...) ::Leaf::Logger::Submit(::Leaf::Logger::LogType::Fatal, "RENDERER", __VA_ARGS__)
 #else
-#	define LF_RENDERER_FATAL(...) // Exclude from build.
+#	define LF_RENDERER_FATAL(...) // Excluded from build.
 #endif

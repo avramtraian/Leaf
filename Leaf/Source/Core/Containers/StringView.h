@@ -7,215 +7,192 @@
 
 namespace Leaf {
 
-	template<typename CharType, typename AllocatorType>
-	class BasicString;
+	template<typename Encoding>
+	class StringBase;
 
-	enum class SearchDirection : uint8
-	{
-		FromStart, FromEnd
-	};
-
-	enum class SearchCase : uint8
-	{
-		CaseSensitive, IgnoreCase
-	};
-
-	template<typename CharType>
-	class BasicStringView
+	/**
+	* 
+	*/
+	template<typename Encoding>
+	class StringViewBase
 	{
 	public:
-		static constexpr uint64 InvalidPos = static_cast<uint64>(-1);
+		static constexpr SizeT InvalidPosition = SIZE_MAX;
+
+	private:
+		/**  */
+		using Char = typename Encoding::CharacterType;
+
+		/**  */
+		using StringCalls = typename Encoding::StringCallsClass;
+
+		/**  */
+		using String = StringBase<Encoding>;
 
 	public:
-		BasicStringView()
-			: m_String(nullptr)
+		StringViewBase()
+			: m_Data(nullptr)
 			, m_Length(0)
 		{}
 
-		BasicStringView(const BasicStringView& other)
-			: m_String(other.m_String)
+		StringViewBase(const StringViewBase& other)
+			: m_Data(other.m_Data)
 			, m_Length(other.m_Length)
 		{}
 
-		BasicStringView(const CharType* string)
-			: m_String(string)
-			, m_Length(StringCalls_Templated::Length<CharType>(string))
+		StringViewBase(StringViewBase&& other) noexcept
+			: m_Data(Leaf::Move(other.m_Data))
+			, m_Length(Leaf::Move(other.m_Length))
+		{
+			other.m_Data = nullptr;
+			other.m_Length = 0;
+		}
+
+		StringViewBase(const Char* string)
+			: m_Data(string)
+			, m_Length(StringCalls::Length(string))
 		{}
 
-		BasicStringView(const CharType* string, uint64 length)
-			: m_String(string)
-			, m_Length(length)
+		StringViewBase(const Char* string, SizeT string_length)
+			: m_Data(string)
+			, m_Length(string_length)
 		{}
 
-		~BasicStringView()
+		/**
+		* Defined in 'String.h'.
+		*/
+		StringViewBase(const String& string);
+
+		~StringViewBase()
 		{}
 
 	public:
-		const CharType* Data() const { return m_String; }
+		StringViewBase& operator=(const StringViewBase& other)
+		{
+			m_Data = other.m_Data;
+			m_Length = other.m_Length;
 
-		const CharType* CStr() const { return m_String; }
+			return *this;
+		}
 
-		uint64 Length() const { return m_Length; }
+		StringViewBase& operator=(StringViewBase&& other) noexcept
+		{
+			m_Data = Leaf::Move(other.m_Data);
+			m_Length = Leaf::Move(other.m_Length);
 
-		bool IsEmpty() const { return m_Length == 0; }
+			other.m_Data = nullptr;
+			other.m_Length = 0;
+
+			return *this;
+		}
+
+		StringViewBase& operator=(const Char* string)
+		{
+			m_Data = string;
+			m_Length = StringCalls::Length(string);
+
+			return *this;
+		}
+
+		/**
+		* Defined in 'String.h'.
+		*/
+		StringViewBase& operator=(const String& string);
 
 	public:
-		uint64 Find(const BasicStringView& substring, uint64 start = 0, uint64 end = 0, SearchDirection direction = SearchDirection::FromStart, SearchCase scase = SearchCase::CaseSensitive) const
+		const Char* Data() const { return m_Data; }
+
+		const Char* CStr() const { return m_Data; }
+
+		SizeT Length() const { return m_Length; }
+
+		bool IsEmpty() const { return (m_Length == 0); }
+
+	public:
+		SizeT Size() const
 		{
-			if (direction == SearchDirection::FromStart)
-			{
-				if (scase == SearchCase::CaseSensitive)
-					return Find_FromStart_CaseSensitive(substring, start, end);
-				else
-					return Find_FromStart_IgnoreCase(substring, start, end);
-			}
-			else
-			{
-				if (scase == SearchCase::CaseSensitive)
-					return Find_FromEnd_CaseSensitive(substring, start, end);
-				else
-					return Find_FromEnd_IgnoreCase(substring, start, end);
-			}
+			SizeT string_size = 0;
+			for (SizeT index = 0; index < m_Length; index++)
+				string_size += StringCalls::GetCharacterWidth(m_Data + string_size);
+
+			return string_size;
 		}
 
-		uint64 Find_FromStart_CaseSensitive(const BasicStringView& substring, uint64 start = 0, uint64 end = 0) const
+		/**
+		* Finds the first instance of the provided substring.
+		* 
+		* @param substring The sequence to be searched.
+		* @param starting_offset The offset (in characters) from which the search will begin.
+		* @param search_length The length (in characters) of the sequence where the search will be performed.
+		*			If this is set to the default value, 'SIZE_MAX', it will search until the end of the string.
+		* 
+		* @returns The offset (in characters), from the beginning, where the first instance is located, if present.
+		*			If there is no instance found, it will return 'InvalidPosition'. If the parameters passed are
+		*			invalid and/or in a bad combination, it will also return 'InvalidPosition'.
+		*/
+		SizeT FindFirstOf(StringViewBase substring, SizeT starting_offset = 0, SizeT search_length = SIZE_MAX)
 		{
-			if (end == 0)
-				end = m_Length;
+			if (search_length == SIZE_MAX)
+				search_length = m_Length - starting_offset;
 
-			if (substring.m_Length > end - start)
-				return InvalidPos;
+			if (substring.Length() > search_length)
+				return InvalidPosition;
 
-			for (uint64 index = start; index <= (end - start) - substring.m_Length; index++)
+			SizeT substring_size = substring.Size();
+			SizeT starting_index = StringViewBase(m_Data, starting_offset).Size();
+			SizeT search_size = StringViewBase(m_Data + starting_index, search_length).Size();
+
+			if (substring_size > search_size)
+				return InvalidPosition;
+
+			LF_ASSERT_RETURN(starting_index + search_size > Size(), InvalidPosition);
+
+			for (SizeT index = starting_index; index < starting_index + search_size - substring_size; index++)
 			{
-				bool found = true;
-				for (uint64 sub_index = 0; sub_index < substring.m_Length; sub_index++)
+				bool match = true;
+
+				for (SizeT substring_index = 0; substring_index < substring_size; substring_index++)
 				{
-					if (m_String[index + sub_index] != substring.m_String[sub_index])
+					if (m_Data[index + substring_index] == substring.Data()[substring_index])
 					{
-						found = false;
+						match = false;
 						break;
 					}
 				}
-				if (found)
+
+				if (match)
 					return index;
 			}
 
-			return InvalidPos;
+			return InvalidPosition;
 		}
 
-		uint64 Find_FromStart_IgnoreCase(const BasicStringView& substring, uint64 start = 0, uint64 end = 0) const
+		/**
+		* 
+		*/
+		StringViewBase Substring(SizeT starting_offset, SizeT substring_length)
 		{
-			if (end == 0)
-				end = m_Length;
+			LF_ASSERT_RETURN(starting_offset + substring_length > m_Length, StringViewBase());
 
-			if (substring.m_Length > end - start)
-				return InvalidPos;
-
-			for (uint64 index = start; index <= (end - start) - substring.m_Length; index++)
-			{
-				bool found = true;
-				for (uint64 sub_index = 0; sub_index < substring.m_Length; sub_index++)
-				{
-					if (!CompareChars_IgnoreCase(m_String[index + sub_index], substring.m_String[sub_index]))
-					{
-						found = false;
-						break;
-					}
-				}
-				if (found)
-					return index;
-			}
-
-			return InvalidPos;
-		}
-
-		uint64 Find_FromEnd_CaseSensitive(const BasicStringView& substring, uint64 start = 0, uint64 end = 0) const
-		{
-			if (end == 0)
-				end = m_Length;
-
-			if (substring.m_Length > end - start)
-				return InvalidPos;
-
-			for (int64 index = (end - start) - substring.m_Length; index >= 0; index--)
-			{
-				bool found = true;
-				for (uint64 sub_index = 0; sub_index < substring.m_Length; sub_index++)
-				{
-					if (m_String[index + sub_index] != substring.m_String[sub_index])
-					{
-						found = false;
-						break;
-					}
-				}
-				if (found)
-					return index;
-			}
-
-			return InvalidPos;
-		}
-
-		uint64 Find_FromEnd_IgnoreCase(const BasicStringView& substring, uint64 start = 0, uint64 end = 0) const
-		{
-			if (end == 0)
-				end = m_Length;
-
-			if (substring.m_Length > end - start)
-				return InvalidPos;
-
-			for (int64 index = (end - start) - substring.m_Length; index >= 0; index--)
-			{
-				bool found = true;
-				for (uint64 sub_index = 0; sub_index < substring.m_Length; sub_index++)
-				{
-					if (!CompareChars_IgnoreCase(m_String[index + sub_index], substring.m_String[sub_index]))
-					{
-						found = false;
-						break;
-					}
-				}
-				if (found)
-					return index;
-			}
-
-			return InvalidPos;
-		}
-
-		BasicStringView Substring(uint64 start, uint64 end = 0) const
-		{
-			if (end == 0)
-				end = m_Length;
-
-			return BasicStringView(m_String + start, end - start);
+			SizeT starting_index = StringViewBase(m_Data, starting_offset).Size();
+			return StringViewBase(m_Data + starting_index, substring_length);
 		}
 
 	private:
-		static constexpr bool CompareChars_IgnoreCase(CharType ca, CharType cb)
-		{
-			uint64 a = (uint64)ca;
-			uint64 b = (uint64)cb;
+		/**  */
+		const Char* m_Data;
 
-			if (a == b)
-				return true;
-
-			if ('a' <= a && a <= 'z')
-				a -= (uint64)('a' - 'A');
-			else
-				return false;
-
-			return (a == b);
-		}
-
-	private:
-		const CharType* m_String;
-		uint64 m_Length;
-
-	private:
-		template<typename FriendCharType, typename FriendAllocatorType>
-		friend class BasicString;
+		/**  */
+		SizeT m_Length;
 	};
 
-	using StringView = BasicStringView<char>;
+	/**  */
+	using StringViewUTF8  = StringViewBase<UTF8Encoding>;
+
+	/**  */
+	using StringViewUTF16 = StringViewBase<UTF16Encoding>;
+
+	/**  */
+	using StringViewASCII = StringViewBase<ASCIIEncoding>;
 
 }

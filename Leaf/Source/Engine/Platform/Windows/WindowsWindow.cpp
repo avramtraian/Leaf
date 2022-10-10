@@ -12,6 +12,8 @@
 #include "Engine/Events/MouseEvents.h"
 #include "Engine/Events/WindowEvents.h"
 
+#include "Renderer/Renderer.h"
+
 #include "Core/Platform/Windows/WindowsHeaders.h"
 
 namespace Leaf {
@@ -159,6 +161,15 @@ namespace Leaf {
 
 		ShowWindow((HWND)m_NativeHandle, show_mode);
 
+		Renderer::RenderingContextSpecification rendering_context_specification;
+		rendering_context_specification.Window = this;
+
+		Renderer::CreateRenderingContext(m_RenderingContext, rendering_context_specification);
+		Renderer::SetActiveRenderingContext(m_RenderingContext);
+
+		Renderer::SwapchainSpecification swapchain_spec;
+		Renderer::RenderingContextCreateSwapchain(m_RenderingContext, swapchain_spec);
+
 		RECT window_rect;
 		GetWindowRect((HWND)m_NativeHandle, &window_rect);
 
@@ -202,7 +213,7 @@ namespace Leaf {
 		SetWindowPos((HWND)m_NativeHandle, NULL, m_Specification.PositionX - win_data->PaddingLeft, new_position_y - win_data->PaddingTop, 0, 0, SWP_NOSIZE);
 	}
 
-	void Window::SetTitle(StringView new_title)
+	void Window::SetTitle(StringViewUTF8 new_title)
 	{
 		SetWindowTextA((HWND)m_NativeHandle, new_title.CStr());
 	}

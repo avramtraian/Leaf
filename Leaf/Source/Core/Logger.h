@@ -23,12 +23,12 @@ namespace Leaf {
 		static void Shutdown();
 
 	public:
-		static void Submit(LogType type, StringView tag, StringView message);
+		static void Submit(LogType type, StringViewUTF8 tag, StringViewUTF8 message);
 
 		template<typename... Args>
-		static void Submit(LogType type, StringView tag, StringView message, Args&&... args)
+		static void Submit(LogType type, StringViewUTF8 tag, StringViewUTF8 message, Args&&... args)
 		{
-			Submit(type, tag, String::Format(message, Leaf::Forward<Args>(args)...).ToView());
+			Submit(type, tag, StringUTF8::Format(message, Leaf::Forward<Args>(args)...));
 		}
 	};
 

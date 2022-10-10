@@ -7,7 +7,7 @@
 
 namespace Leaf {
 
-	class LEAF_API Memory
+	class Memory
 	{
 	public:
 		static bool Initialize();
@@ -15,23 +15,23 @@ namespace Leaf {
 		static void Shutdown();
 
 	public:
-		LF_NODISCARD static void* AllocateRaw(uint64 size);
+		LEAF_API LF_NODISCARD static void* AllocateRaw(uint64 size);
 
-		LF_NODISCARD static void* Allocate(uint64 size);
+		LEAF_API LF_NODISCARD static void* Allocate(uint64 size);
 
-		LF_NODISCARD static void* AllocateTagged(uint64 size, const char* file, const char* function, uint32 line);
-
-	public:
-		static void FreeRaw(void* block);
-
-		static void Free(void* block);
+		LEAF_API LF_NODISCARD static void* AllocateTagged(uint64 size, const char* file, const char* function, uint32 line);
 
 	public:
-		static void Copy(void* destination, const void* source, uint64 size);
+		LEAF_API static void FreeRaw(void* block);
 
-		static void Set(void* destination, uint8 value, uint64 size);
+		LEAF_API static void Free(void* block);
 
-		static void Zero(void* destination, uint64 size);
+	public:
+		LEAF_API static void Copy(void* destination, const void* source, uint64 size);
+
+		LEAF_API static void Set(void* destination, uint8 value, uint64 size);
+
+		LEAF_API static void Zero(void* destination, uint64 size);
 	};
 
 }

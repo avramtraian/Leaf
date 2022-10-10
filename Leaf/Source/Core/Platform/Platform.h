@@ -46,7 +46,7 @@ namespace Leaf {
 	public:
 		static void SetConsoleColor(ConsoleColor foreground, ConsoleColor background);
 
-		static void SubmitTextToConsole_ANSI(StringView text);
+		static void SubmitTextToConsole_UTF8(StringViewUTF8 text);
 
 	public:
 		static void SetCursorVisibility(bool visibility);
