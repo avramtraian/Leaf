@@ -49,7 +49,7 @@ namespace Leaf {
 		StringBase(const Char* string)
 		{
 			SizeT string_size;
-			StringCalls::Length(string, m_Length, string_size);
+			StringCalls::LengthAndSize(string, m_Length, string_size);
 
 			m_Base.SetSizeUninitialized(string_size + 1);
 			Memory::Copy(m_Base.Data(), string, m_Base.Size() * sizeof(Char));

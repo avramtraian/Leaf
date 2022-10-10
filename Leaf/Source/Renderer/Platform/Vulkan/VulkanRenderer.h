@@ -48,7 +48,7 @@
 #	define LF_VK_CHECK(EXPRESSION)                      EXPRESSION
 #	define LF_VK_CHECK_RETURN(EXPRESSION, RETURN_VALUE) EXPRESSION
 #	define LF_VK_CHECK_RETURN_VOID(EXPRESSION)          EXPRESSION
-#	define LF_VK_CHECK_AND(EXPRESSION, ...)         EXPRESSION
+#	define LF_VK_CHECK_AND(EXPRESSION, ...)             EXPRESSION
 #endif
 
 namespace Leaf { namespace Renderer { namespace VulkanRenderer {
